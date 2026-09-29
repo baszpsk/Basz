@@ -279,3 +279,26 @@ export function LineChart(props: { series: Series[]; max: number; title: string;
     </div>
   );
 }
+
+/** 12-point trend for a stat row: the line in the de-emphasis hue, today's value in the metric's color. */
+export function Spark(props: { points: { key: string; value: number | undefined }[]; tone: string; label: string }) {
+  const W = 72;
+  const H = 30;
+  const pad = 5;
+  const vals = props.points.map((p) => p.value).filter((v): v is number => v != null);
+  if (vals.length < 2) return <svg width={W} height={H} aria-hidden="true" />;
+  const lo = Math.min(...vals);
+  const hi = Math.max(...vals);
+  const n = props.points.length;
+  const x = (i: number) => pad + (i / (n - 1)) * (W - pad * 2);
+  const y = (v: number) => (hi === lo ? H / 2 : pad + (1 - (v - lo) / (hi - lo)) * (H - pad * 2));
+  const idx = props.points.map((p, i) => (p.value == null ? -1 : i)).filter((i) => i >= 0);
+  const d = idx.map((i, j) => `${j ? 'L' : 'M'}${x(i).toFixed(1)},${y(props.points[i].value as number).toFixed(1)}`).join('');
+  const last = idx[idx.length - 1];
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={props.label} style={{ flex: 'none', overflow: 'visible' }}>
+      <path d={d} fill="none" stroke="var(--ink-3)" stroke-opacity="0.55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <circle cx={x(last)} cy={y(props.points[last].value as number)} r="4" fill={props.tone} stroke="var(--ground)" stroke-width="2" />
+    </svg>
+  );
+}

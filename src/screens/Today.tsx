@@ -1,7 +1,7 @@
 import { Fragment, type JSX } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { I } from '../components/icons';
-import { burstFrom, Check, CountUp, Glass, Pill, Progress, Ring, Sheet, toast, toneOf } from '../components/ui';
+import { burstFrom, Check, CountUp, Delta, Glass, Pill, Progress, Ring, Sheet, toast, toneOf } from '../components/ui';
 import { completeTask, patchDay, saveTask, setCheck, snooze } from '../lib/actions';
 import { copyForError, planDay, sampleCap } from '../lib/ai';
 import type { Alert } from '../lib/alerts';
@@ -13,7 +13,8 @@ import { caffeineCutoff } from '../lib/sleepcoach';
 import { sound } from '../lib/sound';
 import { addDays, dateKey, fmtDayLong, fmtDuration, fmtHM, logicalMinutes, monthOf, pad, parseHM, todayKey } from '../lib/time';
 import type { DayLog, Task } from '../lib/types';
-import { computeStats } from '../lib/xp';
+import { saveBackup } from '../lib/backup';
+import { buildMetrics, summarize } from '../lib/progress';
 import { TaskComposer, TaskRow } from './Tasks';
 
 const KIND_TONE: Record<string, string> = {
@@ -62,7 +63,7 @@ function ItemList(props: { block: Block; checks: Record<string, number | null>; 
                 setCheck(props.today, it.id, !on);
                 if (!on) {
                   sound.tick();
-                  burstFrom(e, it.id === 'lights-out' ? '+20 XP' : '+5 XP', it.kind === 'med' ? 'var(--a-growth)' : undefined);
+                  burstFrom(e, '', it.kind === 'med' ? 'var(--a-growth)' : undefined);
                 }
               }}
             />
@@ -168,7 +169,7 @@ function AlertsStrip(props: { alerts: Alert[]; nav: Nav }) {
     <Glass class="list">
       {list.map((a) => (
         <div key={a.id} class="item">
-          <span style={{ color: a.urgent ? 'var(--warn)' : 'var(--ink-2)' }}>{a.kind === 'med' ? I.pill() : a.kind === 'flow' ? I.shirt() : a.kind === 'followup' ? I.user() : a.kind === 'sleep' ? I.moon() : I.clock()}</span>
+          <span style={{ color: a.urgent ? 'var(--warn)' : 'var(--ink-2)' }}>{a.kind === 'med' ? I.pill() : a.kind === 'flow' ? I.shirt() : a.kind === 'followup' ? I.user() : a.kind === 'sleep' ? I.moon() : a.kind === 'backup' ? I.download() : I.clock()}</span>
           <div class="grow">
             <div class="t">{a.title}</div>
             {a.body && <div class="d">{a.body}</div>}
@@ -176,11 +177,12 @@ function AlertsStrip(props: { alerts: Alert[]; nav: Nav }) {
           {a.task && a.kind === 'flow' && (
             <div class="row" style={{ gap: '6px' }}>
               <button class="btn small ghost" onClick={() => { snooze(a.task!, 30); toast('Snoozed 30 min'); }}>Later</button>
-              <button class="btn small" onClick={(e) => { completeTask(a.task!); sound.done(); burstFrom(e, '+20 XP'); }}>Done</button>
+              <button class="btn small" onClick={(e) => { completeTask(a.task!); sound.done(); burstFrom(e, ''); }}>Done</button>
             </div>
           )}
           {a.task && a.kind !== 'flow' && <button class="btn small" onClick={() => props.nav.task(a.task!)}>Open</button>}
           {a.kind === 'sleep' && <button class="btn small" onClick={() => props.nav.hub('alarm')}>Review</button>}
+          {a.kind === 'backup' && <button class="btn small" onClick={async () => { const r = await saveBackup(); toast(r === 'saved' ? 'Backup saved' : r === 'unavailable' ? 'Backup download is not available here' : 'Backup not saved'); }}>Save</button>}
         </div>
       ))}
     </Glass>
@@ -314,7 +316,7 @@ export function CheckinSheet(props: { open: boolean; onClose: () => void }) {
           onClick={(e) => {
             patchDay(d.today, { symptoms: { belch, heartburn: heart, energy }, sleep: { quality: sleepQ, latency: lat, awake: awk }, steps: steps ? Number(steps) : undefined, checks: { checkin: Date.now() } });
             sound.done();
-            burstFrom(e, '+5 XP');
+            burstFrom(e, '');
             props.onClose();
           }}
         >
@@ -391,7 +393,7 @@ export function PlanSheet(props: { open: boolean; onClose: () => void }) {
             patchDay(d.today, { checks: { top3: Date.now() } });
             picked.forEach((id) => d.s.tasks[id] && saveTask({ ...d.s.tasks[id], pinned: true }));
             sound.done();
-            burstFrom(e, '+5 XP');
+            burstFrom(e, '');
             props.onClose();
           }}
         >
@@ -406,11 +408,19 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
   const d = useDay();
   const { s, now, today, dayLog, ranked, checks, blocks } = d;
   const [openBlock, setOpenBlock] = useState<Block | null>(null);
-  const stats = useMemo(() => computeStats(s.logs, s.tasks, s.plan, today, d.R), [s.logs, s.tasks, s.plan, today]);
+  const metrics = useMemo(() => buildMetrics(s.logs, s.tasks, s.digests, s.settings, s.plan, today, now), [s.logs, s.tasks, s.digests, s.settings, s.plan, today, Math.floor(now.getTime() / 300000)]);
+  const sum = (id: string) => {
+    const m = metrics.find((x) => x.id === id);
+    return m ? summarize(m, today) : undefined;
+  };
+  const routineS = sum('routine');
+  const tasksS = sum('tasks');
+  const sleepS = sum('sleep');
   const allItems = blocks.flatMap((b) => b.items || []);
   const doneItems = allItems.filter((i) => checks[i.id]).length;
   const name = s.plan?.profile?.name || 'Basz';
-  const lvProg = (stats.xp - stats.levelFloor) / Math.max(1, stats.levelNext - stats.levelFloor);
+  const routinePct = allItems.length ? Math.round((doneItems / allItems.length) * 100) : 0;
+  const sleptToday = sleepS?.latest?.key === today;
   const top = ranked.filter((r) => !r.task.flow).slice(0, 3);
   const unread = props.alerts.length;
 
@@ -425,9 +435,9 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
           {I.bell({ size: 20 })}
           {unread > 0 && <span class="dot" />}
         </button>
-        <button aria-label={`Level ${stats.level}, open stats`} style={{ border: 0, background: 'none', padding: 0 }} onClick={() => props.nav.hub('stats')}>
-          <Ring value={lvProg} size={44} stroke={4} label={`Level ${stats.level}`}>
-            <span class="display-num" style={{ fontSize: '14px' }}>{stats.level}</span>
+        <button aria-label={`Routine ${routinePct}% today, open progress`} style={{ border: 0, background: 'none', padding: 0 }} onClick={() => props.nav.hub('stats')}>
+          <Ring value={routinePct / 100} size={44} stroke={4} tone="var(--good)" label="Routine done today">
+            <span class="display-num" style={{ fontSize: '11px' }}>{routinePct}%</span>
           </Ring>
         </button>
       </div>
@@ -440,17 +450,18 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
           <div class="k">ROUTINE</div>
           <div class="v"><CountUp value={doneItems} /><span class="tiny">/{allItems.length}</span></div>
           <Progress value={allItems.length ? doneItems / allItems.length : 0} tone="var(--good)" label="Routine done" />
+          {routineS && <Delta s={routineS} today={today} />}
         </div>
         <div class="tile" style={{ '--tone': 'var(--accent)' } as JSX.CSSProperties}>
           <div class="k">TASKS DONE</div>
-          <div class="v"><CountUp value={stats.tasks.doneToday} /></div>
-          <div class="tiny">{stats.tasks.doneWeek} this week</div>
+          <div class="v"><CountUp value={tasksS?.latest?.key === today ? tasksS.latest.value : 0} /></div>
+          {tasksS?.latest?.key === today && <Delta s={tasksS} today={today} />}
         </div>
-        <div class="tile" style={{ '--tone': 'var(--a-seoulful)' } as JSX.CSSProperties}>
-          <div class="k">XP TODAY</div>
-          <div class="v"><CountUp value={stats.todayXp} /></div>
-          <div class="tiny row" style={{ gap: '4px' }}><span style={{ color: 'var(--warn)' }}>{I.flame({ size: 14 })}</span>{stats.sleep.streak} night streak</div>
-        </div>
+        <button class="tile" style={{ '--tone': 'var(--a-home)', textAlign: 'left', border: 0, color: 'inherit' } as JSX.CSSProperties} onClick={sleptToday ? () => props.nav.hub('stats') : props.nav.checkin}>
+          <div class="k">SLEEP</div>
+          <div class="v">{sleptToday ? sleepS!.latest!.value.toFixed(1) : '–'}<span class="tiny"> h</span></div>
+          {sleptToday ? <Delta s={sleepS!} today={today} /> : <div class="tiny">Check in to log</div>}
+        </button>
       </div>
 
       <div class="section-head">

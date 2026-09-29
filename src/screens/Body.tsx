@@ -11,7 +11,7 @@ import { medMinutes } from '../lib/schedule';
 import { sound } from '../lib/sound';
 import { addDays, fmtClock, fmtHM, fmtShortDate, monthOf, todayKey, weekday, wdName } from '../lib/time';
 import type { SetLog } from '../lib/types';
-import { computeStats } from '../lib/xp';
+import { computeStats } from '../lib/stats';
 
 // ---------------- Workout player ----------------
 type Phase = 'warmup' | 'set' | 'rest' | 'summary';
@@ -127,7 +127,7 @@ export function WorkoutSheet(props: { programId: string | null; onClose: () => v
       saveMeta({ levels });
     }
     sound.done();
-    burstFrom(e, '+60 XP', 'var(--a-health)');
+    burstFrom(e, 'Saved', 'var(--a-health)');
     toast('Workout saved');
     props.onClose();
   };
@@ -303,8 +303,8 @@ export function BreathSheet(props: { presetId: string | null; onClose: () => voi
       logBreath({ start: startAt, minutes: mins, preset: preset.id });
       const itemId = preset.id === 'sleep' ? 'breath-night' : new Date().getHours() < 15 ? 'breath-am' : 'breath-pm';
       if (mins >= preset.minutes - 1 && preset.id !== 'sos') setCheck(today, itemId, true);
-      if (e) burstFrom(e, `+${mins} XP`, 'var(--a-home)');
-      else burst(window.innerWidth / 2, window.innerHeight / 2, `+${mins} XP`, 'var(--a-home)');
+      if (e) burstFrom(e, `${mins} min`, 'var(--a-home)');
+      else burst(window.innerWidth / 2, window.innerHeight / 2, `${mins} min`, 'var(--a-home)');
       toast(`Breathing ${mins} min saved`);
     }
     setRunning(false);
@@ -464,7 +464,7 @@ export function BodyScreen(props: { nav: Nav }) {
                   const on = !!checks[id];
                   return (
                     <div key={m.id} class={`item ${on ? 'done' : ''}`} style={{ padding: '10px 2px' }}>
-                      <Check on={on} tone="var(--a-growth)" label={m.name} onToggle={(e) => { setCheck(today, id, !on); if (!on) burstFrom(e, '+5 XP', 'var(--a-growth)'); }} />
+                      <Check on={on} tone="var(--a-growth)" label={m.name} onToggle={(e) => { setCheck(today, id, !on); if (!on) burstFrom(e, '', 'var(--a-growth)'); }} />
                       <div class="grow"><div class="t">{m.name}</div>{m.note && <div class="d">{m.note}</div>}</div>
                       <span class="tiny num">{fmtHM(medMinutes(m, s.settings))}</span>
                     </div>

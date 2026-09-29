@@ -33,6 +33,8 @@ export interface Meta {
   onboarded?: boolean;
   /** Logical day the sleep window last moved; the coach only reads nights after it. */
   sleepWindowFrom?: string;
+  /** When the last backup file was saved. */
+  lastBackupAt?: number;
 }
 
 export interface State {

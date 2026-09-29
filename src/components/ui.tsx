@@ -1,6 +1,8 @@
 import type { ComponentChildren, JSX } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { sound } from '../lib/sound';
+import { fmtValue, type Summary } from '../lib/progress';
+import { addDays, fmtShortDate } from '../lib/time';
 import type { Area } from '../lib/types';
 import { I } from './icons';
 
@@ -179,6 +181,22 @@ export function CountUp(props: { value: number; ms?: number }) {
   return <>{shown}</>;
 }
 
+/** Change since the last recorded value, colored and worded by whether it is an improvement. */
+export function Delta(props: { s: Summary; today: string }) {
+  const { s } = props;
+  if (!s.verdict || !s.latest || !s.prev || s.delta == null) return null;
+  const vs = s.vsLabel ?? (s.prev.key === addDays(s.latest.key, -1) ? (s.latest.key === props.today ? 'vs yesterday' : 'vs day before') : `vs ${fmtShortDate(s.prev.key)}`);
+  const same = s.verdict === 'same';
+  const arrow = same ? '=' : s.delta > 0 ? '▲' : '▼';
+  const tone = s.verdict === 'better' ? 'var(--good)' : s.verdict === 'worse' ? 'var(--bad)' : 'var(--ink-3)';
+  return (
+    <span class="delta" style={{ '--tone': tone } as JSX.CSSProperties}>
+      {arrow} {same ? 'same' : `${s.delta > 0 ? '+' : '−'}${fmtValue(s.metric, Math.abs(s.delta))} ${s.verdict}`}
+      <span class="vs">{vs}</span>
+    </span>
+  );
+}
+
 export function Pill(props: { tone?: string; children: ComponentChildren }) {
   return (
     <span class="pill" style={{ '--tone': props.tone } as JSX.CSSProperties}>
@@ -187,7 +205,7 @@ export function Pill(props: { tone?: string; children: ComponentChildren }) {
   );
 }
 
-// ---------- Toasts and XP bursts (outside the component tree) ----------
+// ---------- Toasts and celebration bursts (outside the component tree) ----------
 type ToastMsg = { id: number; text: string };
 let toastListener: ((t: ToastMsg | null) => void) | null = null;
 let toastTimer: number | undefined;
@@ -215,14 +233,16 @@ export function ToastHost() {
 
 export function burst(x: number, y: number, text: string, tone = 'var(--good)') {
   const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const f = document.createElement('div');
-  f.className = 'xp-float';
-  f.textContent = text;
-  f.style.left = x + 'px';
-  f.style.top = y - 12 + 'px';
-  f.style.color = tone;
-  document.body.appendChild(f);
-  window.setTimeout(() => f.remove(), 1200);
+  if (text) {
+    const f = document.createElement('div');
+    f.className = 'xp-float';
+    f.textContent = text;
+    f.style.left = x + 'px';
+    f.style.top = y - 12 + 'px';
+    f.style.color = tone;
+    document.body.appendChild(f);
+    window.setTimeout(() => f.remove(), 1200);
+  }
   if (reduce) return;
   for (let i = 0; i < 10; i++) {
     const s = document.createElement('i');

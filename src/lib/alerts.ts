@@ -1,9 +1,10 @@
 // In-app notifications, derived from state: due flow steps, follow-ups,
 // overdue tasks, meds not taken, a sleep-window change the coach suggests,
-// and new items Claude put into the digests.
+// a monthly backup reminder, and new items Claude put into the digests.
 
 import { isActionable } from './priority';
 import type { Block } from './schedule';
+import { BACKUP_EVERY_DAYS } from './backup';
 import { sleepAdvice } from './sleepcoach';
 import type { State } from './store';
 import { dueToTs, monthOf } from './time';
@@ -11,7 +12,7 @@ import type { DigestItem, Task } from './types';
 
 export interface Alert {
   id: string;
-  kind: 'flow' | 'followup' | 'overdue' | 'med' | 'sleep' | 'digest';
+  kind: 'flow' | 'followup' | 'overdue' | 'med' | 'sleep' | 'backup' | 'digest';
   title: string;
   body?: string;
   task?: Task;
@@ -45,6 +46,11 @@ export function computeAlerts(s: State, now: Date, today: string, blocks: Block[
       title: sa.action === 'earlier' ? `Sleep longer: lights out ${sa.next}` : `Sleep deeper: lights out ${sa.next}`,
       body: `จากเช็คอิน ${sa.nights} คืนล่าสุด · แตะ Review เพื่อดูเหตุผลและยืนยัน`,
     });
+  }
+  const loggedDays = Object.values(s.logs).reduce((n, m) => n + Object.keys(m.days || {}).length, 0);
+  const lastBackup = s.meta.lastBackupAt || 0;
+  if (loggedDays >= 7 && ts - lastBackup > BACKUP_EVERY_DAYS * 86400000) {
+    out.push({ id: 'backup-' + monthOf(today), kind: 'backup', title: 'Save a backup of your history', body: 'ไฟล์เดียว เก็บลง iCloud Drive ไว้อีกชุด เดือนละครั้ง' });
   }
   const seen = s.meta.seen || {};
   const digests = Object.values(s.digests).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 7);

@@ -1,8 +1,8 @@
-import type { ComponentChildren, JSX } from 'preact';
+import { Fragment, type ComponentChildren, type JSX } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { BarChart, HeatMap } from '../components/charts';
+import { BarChart, Spark } from '../components/charts';
 import { I } from '../components/icons';
-import { burstFrom, Check, Empty, Glass, Pill, Progress, Ring, Seg, toast } from '../components/ui';
+import { burstFrom, Check, CountUp, Delta, Empty, Glass, Pill, Seg, Sheet, toast } from '../components/ui';
 import { FABRICS, LOADS, MACHINE_CARE, SMELL_FIX } from '../content/laundry';
 import { markSeen, newTask, saveMeta, saveSettings, saveShop, saveTask, setCycleMinutes, startLaundry } from '../lib/actions';
 import { coach, copyForError, sampleCap } from '../lib/ai';
@@ -16,7 +16,8 @@ import { buildDay } from '../lib/schedule';
 import { caffeineCutoff, MIN_NIGHTS, sleepAdvice } from '../lib/sleepcoach';
 import { addDays, fmtHM, fmtShortDate, monthOf, parseHM as parseHMx, relTime, todayKey, wdName, weekday } from '../lib/time';
 import type { DigestItem, ShopItem } from '../lib/types';
-import { computeStats } from '../lib/xp';
+import { buildMetrics, fmtValue, lastDays, summarize, type Group, type Summary } from '../lib/progress';
+import { saveBackup } from '../lib/backup';
 
 const TILES: { id: HubPage; name: string; sub: string; icon: (p?: { size?: number }) => JSX.Element; tone: string }[] = [
   { id: 'seoulful', name: 'Seoulful', sub: 'Sales · reviews · ideas', icon: I.store, tone: 'var(--a-seoulful)' },
@@ -24,7 +25,7 @@ const TILES: { id: HubPage; name: string; sub: string; icon: (p?: { size?: numbe
   { id: 'inbox', name: 'Inbox', sub: 'Important email', icon: I.mail, tone: 'var(--a-home)' },
   { id: 'laundry', name: 'Laundry', sub: 'Loads · care · flow', icon: I.shirt, tone: 'var(--a-home)' },
   { id: 'shop', name: 'Shopping', sub: 'What to buy · prices', icon: I.cart, tone: 'var(--a-personal)' },
-  { id: 'stats', name: 'Stats', sub: 'Level · trophies', icon: I.trophy, tone: 'var(--a-trading)' },
+  { id: 'stats', name: 'Progress', sub: 'You vs your past self', icon: I.chart, tone: 'var(--a-trading)' },
   { id: 'coach', name: 'Ask Claude', sub: 'Questions on your plan', icon: I.spark, tone: 'var(--a-growth)' },
   { id: 'hairline', name: 'Hairline', sub: 'Photo tracker', icon: I.camera, tone: 'var(--a-personal)' },
   { id: 'alarm', name: 'Alarm & sleep', sub: 'Wake-up setup', icon: I.alarm, tone: 'var(--a-growth)' },
@@ -187,8 +188,8 @@ function InboxPage(props: { alerts: Alert[]; nav: Nav; back: () => void }) {
       />
       <Glass class="list">
         {all.filter((a) => a.kind !== 'digest').length ? all.filter((a) => a.kind !== 'digest').map((a) => (
-          <button key={a.id} class="item" onClick={() => (a.kind === 'sleep' ? props.nav.hub('alarm') : a.task && props.nav.task(a.task))}>
-            <span style={{ color: a.urgent ? 'var(--warn)' : 'var(--ink-3)' }}>{a.kind === 'med' ? I.pill() : a.kind === 'flow' ? I.shirt() : a.kind === 'followup' ? I.user() : a.kind === 'sleep' ? I.moon() : I.clock()}</span>
+          <button key={a.id} class="item" onClick={() => (a.kind === 'sleep' ? props.nav.hub('alarm') : a.kind === 'backup' ? props.nav.hub('stats') : a.task && props.nav.task(a.task))}>
+            <span style={{ color: a.urgent ? 'var(--warn)' : 'var(--ink-3)' }}>{a.kind === 'med' ? I.pill() : a.kind === 'flow' ? I.shirt() : a.kind === 'followup' ? I.user() : a.kind === 'sleep' ? I.moon() : a.kind === 'backup' ? I.download() : I.clock()}</span>
             <div class="grow"><div class="t">{a.title}</div>{a.body && <div class="d">{a.body}</div>}</div>
           </button>
         )) : <Empty title="All clear" body="ไม่มีงานที่เลยกำหนดหรือรอติดตาม" />}
@@ -369,61 +370,133 @@ function ShopPage(props: { back: () => void }) {
   );
 }
 
-function StatsPage(props: { back: () => void }) {
+const GROUPS: Group[] = ['Day', 'Sleep', 'Body', 'Health', 'Seoulful'];
+
+function MetricRow(props: { s: Summary; today: string; onOpen: () => void }) {
+  const { s, today } = props;
+  const m = s.metric;
+  const bits = [
+    s.avg7 != null ? `7-day avg ${fmtValue(m, s.avg7)}` : '',
+    s.best ? `best ${fmtValue(m, s.best.value)}` : '',
+    s.latest && s.latest.key !== today ? `last ${fmtShortDate(s.latest.key)}` : '',
+  ].filter(Boolean);
+  return (
+    <button class="item" onClick={props.onOpen}>
+      <div class="grow">
+        <div class="t">{m.label}{s.isBest && s.latest?.key === today ? <span class="pill" style={{ '--tone': 'var(--a-trading)', marginLeft: '6px' } as JSX.CSSProperties}>{I.trophy({ size: 12 })} best</span> : null}</div>
+        <div class="d">{bits.join(' · ')}</div>
+      </div>
+      <Spark points={lastDays(m, today, 12)} tone={m.tone} label={`${m.label}, last 12 days`} />
+      <div style={{ textAlign: 'right', minWidth: '92px' }}>
+        <div class="display-num" style={{ fontSize: '18px' }}>{fmtValue(m, s.latest?.value)}</div>
+        <Delta s={s} today={today} />
+      </div>
+    </button>
+  );
+}
+
+function MetricSheet(props: { s: Summary | null; today: string; onClose: () => void }) {
+  const s = props.s;
+  const m = s?.metric;
+  const pts = m ? [...m.values.entries()].filter(([k]) => k <= props.today).sort(([a], [b]) => (a < b ? -1 : 1)).slice(-30) : [];
+  const cmp = (a?: number, b?: number) => {
+    if (!m || a == null || b == null) return '';
+    if (Math.abs(a - b) < Math.pow(10, -m.decimals) / 2) return ' · same';
+    return (m.better === 'up' ? a > b : a < b) ? ' · better' : ' · worse';
+  };
+  const row = (k: string, v: string) => (
+    <div class="item" key={k}>
+      <span class="grow sub">{k}</span>
+      <span class="num" style={{ fontWeight: 650 }}>{v}</span>
+    </div>
+  );
+  return (
+    <Sheet open={!!s} onClose={props.onClose} title={m?.label}>
+      {s && m && (
+        <div class="stack">
+          {pts.length > 0 && (
+            <BarChart
+              data={pts.map(([key, value]) => ({ key, label: fmtShortDate(key), value: m.decimals ? Number(value.toFixed(m.decimals)) : Math.round(value) }))}
+              unit={m.unit}
+              title={`${m.label}, recorded days`}
+              tone={m.tone}
+              labelLast
+            />
+          )}
+          <Glass class="list">
+            {row('Latest', `${fmtValue(m, s.latest?.value)}${s.latest ? ` · ${fmtShortDate(s.latest.key)}` : ''}`)}
+            {row('Before that', `${fmtValue(m, s.prev?.value)}${s.prev ? ` · ${fmtShortDate(s.prev.key)}` : ''}`)}
+            {row('7 days vs the 7 before', `${fmtValue(m, s.avg7)} vs ${fmtValue(m, s.avg7Prev)}${cmp(s.avg7, s.avg7Prev)}`)}
+            {row('30 days vs the 30 before', `${fmtValue(m, s.avg30)} vs ${fmtValue(m, s.avg30Prev)}${cmp(s.avg30, s.avg30Prev)}`)}
+            {row('All-time best', `${fmtValue(m, s.best?.value)}${s.best ? ` · ${fmtShortDate(s.best.key)}` : ''}`)}
+            {row('Days recorded', `${s.count}${s.first ? ` since ${fmtShortDate(s.first)}` : ''}`)}
+          </Glass>
+          <div class="tiny">{m.better === 'up' ? 'Higher is better.' : 'Lower is better.'} Every number comes from what you logged, and old days are never deleted.</div>
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
+function ProgressPage(props: { back: () => void }) {
   const s = useStore();
   const now = useNow(60000);
   const today = todayKey(now, s.settings.rolloverHour);
-  const st = useMemo(() => computeStats(s.logs, s.tasks, s.plan, today, s.settings.rolloverHour), [s.logs, s.tasks, s.plan, today]);
-  const prog = (st.xp - st.levelFloor) / Math.max(1, st.levelNext - st.levelFloor);
-  const done = st.achievements.filter((a) => a.earned).length;
+  const metrics = useMemo(() => buildMetrics(s.logs, s.tasks, s.digests, s.settings, s.plan, today, now), [s.logs, s.tasks, s.digests, s.settings, s.plan, today, Math.floor(now.getTime() / 300000)]);
+  const sums = useMemo(() => metrics.map((m) => summarize(m, today)), [metrics, today]);
+  const [open, setOpen] = useState<Summary | null>(null);
+  const withData = sums.filter((x) => x.count > 0);
+  const vsToday = withData.filter((x) => x.latest?.key === today && x.verdict);
+  const count = (v: Summary['verdict']) => vsToday.filter((x) => x.verdict === v).length;
+  const bests = withData.filter((x) => x.isBest && x.latest?.key === today);
+  const missing = sums.filter((x) => x.count === 0).map((x) => x.metric.label);
+  const lastBackup = s.meta.lastBackupAt;
+  const backup = async () => {
+    const r = await saveBackup();
+    toast(r === 'saved' ? 'Backup saved' : r === 'declined' ? 'Backup not saved' : r === 'unavailable' ? 'Backup download is not available here' : 'Backup was not saved');
+  };
   return (
     <div class="screen">
-      <PageHead title="Stats" eyebrow="Level · challenges · trophies" onBack={props.back} />
-      <Glass class="hero" tone="var(--a-trading)">
+      <PageHead title="Progress" eyebrow="You vs your past self" onBack={props.back} />
+      <Glass class="hero" tone="var(--accent)">
         <div class="glow" />
-        <div class="row" style={{ gap: '16px' }}>
-          <Ring value={prog} size={92} stroke={7} tone="var(--a-trading)" label={`Level ${st.level}`}>
-            <div class="center"><div class="display-num" style={{ fontSize: '26px' }}>{st.level}</div><div class="tiny">LEVEL</div></div>
-          </Ring>
-          <div class="grow">
-            <div class="eyebrow">{st.levelName}</div>
-            <div class="display-num" style={{ fontSize: '28px' }}>{st.xp.toLocaleString()} XP</div>
-            <div class="tiny">{(st.levelNext - st.xp).toLocaleString()} XP to level {st.level + 1} · +{st.todayXp} today</div>
+        <div class="eyebrow">Today vs last time</div>
+        <div class="tiles" style={{ marginTop: '10px' }}>
+          <div class="tile" style={{ '--tone': 'var(--good)' } as JSX.CSSProperties}><div class="k">BETTER</div><div class="v"><CountUp value={count('better')} /></div></div>
+          <div class="tile" style={{ '--tone': 'var(--ink-2)' } as JSX.CSSProperties}><div class="k">SAME</div><div class="v"><CountUp value={count('same')} /></div></div>
+          <div class="tile" style={{ '--tone': 'var(--bad)' } as JSX.CSSProperties}><div class="k">WORSE</div><div class="v"><CountUp value={count('worse')} /></div></div>
+        </div>
+        {bests.length > 0 && (
+          <div class="row wrap" style={{ gap: '6px', marginTop: '12px' }}>
+            {bests.map((b) => <span key={b.metric.id} class="pill" style={{ '--tone': 'var(--a-trading)' } as JSX.CSSProperties}>{I.trophy({ size: 12 })} New best · {b.metric.label} {fmtValue(b.metric, b.latest!.value)}</span>)}
           </div>
+        )}
+        <div class="sub" style={{ marginTop: '10px' }}>
+          {vsToday.length ? 'แต่ละตัวเทียบกับครั้งล่าสุดที่บันทึก แตะแต่ละแถวเพื่อดูค่าเฉลี่ย 7 และ 30 วัน และสถิติดีที่สุดตลอดกาล' : 'วันนี้ยังไม่มีตัวเลขให้เทียบ ติ๊กงานในตาราง ทำเช็คอิน หรือบันทึกการออกกำลังกาย แล้วตัวเลขจะขึ้นเทียบกับครั้งก่อนทันที'}
         </div>
       </Glass>
-      <div class="section-head"><h2 class="h2">This week's challenges</h2></div>
-      <Glass class="pad stack">
-        {st.challenges.map((c) => (
-          <div key={c.id} class="stack-sm">
-            <div class="row between"><span class="h3">{c.title}</span><span class="tiny num">{Math.round(c.value)}/{c.target} {c.unit}</span></div>
-            <Progress value={c.value / c.target} tone={c.value >= c.target ? 'var(--good)' : 'var(--accent)'} label={c.title} />
-          </div>
-        ))}
-      </Glass>
-      <div class="tiles">
-        <div class="tile"><div class="k">TASKS DONE</div><div class="v">{st.tasks.doneTotal}</div><div class="tiny">{st.tasks.doneWeek} this week</div></div>
-        <div class="tile"><div class="k">WORKOUTS</div><div class="v">{st.workouts.total}</div><div class="tiny">{st.workouts.thisWeek} this week</div></div>
-        <div class="tile"><div class="k">BREATHING</div><div class="v">{Math.round(st.breath.totalMin)}</div><div class="tiny">minutes total</div></div>
-      </div>
+      {GROUPS.map((g) => {
+        const list = withData.filter((x) => x.metric.group === g);
+        if (!list.length) return null;
+        return (
+          <Fragment key={g}>
+            <div class="section-head"><h2 class="h2">{g}</h2></div>
+            <Glass class="list">
+              {list.map((x) => <MetricRow key={x.metric.id} s={x} today={today} onOpen={() => setOpen(x)} />)}
+            </Glass>
+          </Fragment>
+        );
+      })}
+      {missing.length > 0 && <div class="tiny" style={{ padding: '0 4px' }}>Starts once recorded: {missing.join(' · ')}</div>}
       <Glass class="pad stack-sm">
-        <div class="h3">Workouts · 12 weeks</div>
-        <HeatMap data={st.workouts.days} unit="workouts" title="Workouts per day" tone="var(--a-health)" />
+        <div class="h3">Your history</div>
+        <div class="sub">ทุกตัวเลขคำนวณจากบันทึกจริงในบัญชี Claude ของคุณ ไม่มีการลบวันเก่า และเครื่องนี้เก็บสำเนาไว้ด้วย ถ้าอยากมีสำเนาของตัวเองอีกชุด ให้บันทึกไฟล์สำรองลง iCloud เดือนละครั้ง แอปจะเตือนเมื่อครบเดือน</div>
+        <div class="row between wrap" style={{ gap: '8px' }}>
+          <span class="tiny">{lastBackup ? `Last backup ${relTime(lastBackup, now.getTime())}` : 'No backup file yet'}</span>
+          <button class="btn small" onClick={backup}>{I.download({ size: 16 })} Save backup file</button>
+        </div>
       </Glass>
-      <Glass class="pad stack-sm">
-        <div class="h3">Breathing · 14 days</div>
-        <BarChart data={st.breath.days.map((p) => ({ key: p.key, label: fmtShortDate(p.key), value: Math.round(p.value) }))} unit="min" title="Breathing minutes per day" tone="var(--a-home)" labelLast />
-      </Glass>
-      <div class="section-head"><h2 class="h2">Trophies</h2><span class="tiny">{done}/{st.achievements.length}</span></div>
-      <div class="grid2">
-        {st.achievements.map((a) => (
-          <div key={a.id} class="glass hubtile" style={{ '--tone': a.earned ? 'var(--a-trading)' : 'var(--ink-3)', opacity: a.earned ? 1 : 0.7, minHeight: '0' } as JSX.CSSProperties}>
-            <span class="ic">{I.trophy({ size: 20 })}</span>
-            <div><div class="h3">{a.title}</div><div class="tiny">{a.desc}</div></div>
-            {!a.earned && <Progress value={a.progress || 0} tone="var(--a-trading)" label={a.title} />}
-          </div>
-        ))}
-      </div>
+      <MetricSheet s={open} today={today} onClose={() => setOpen(null)} />
     </div>
   );
 }
@@ -616,11 +689,7 @@ function AlarmPage(props: { back: () => void }) {
 function SettingsPage(props: { back: () => void }) {
   const s = useStore();
   const st = s.settings;
-  const [downloads, setDownloads] = useState<any>(undefined);
   const fileRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    cap('downloads').then(setDownloads);
-  }, []);
   const time = (id: keyof typeof st, label: string) => (
     <div class="field">
       <label for={`set-${id}`}>{label}</label>
@@ -639,17 +708,10 @@ function SettingsPage(props: { back: () => void }) {
     </div>
   );
   const backup = async () => {
-    const data = JSON.stringify(store.exportAll(), null, 1);
-    if (!downloads) {
-      toast('Backup download is not available here');
-      return;
-    }
-    try {
-      await downloads.save({ filename: `basz-os-backup-${todayKey(new Date(), 6)}.json`, data });
-      toast('Backup saved');
-    } catch (e: any) {
-      if (e?.code !== 'declined') toast('Backup was not saved');
-    }
+    const r = await saveBackup();
+    if (r === 'saved') toast('Backup saved');
+    else if (r === 'unavailable') toast('Backup download is not available here');
+    else if (r === 'failed') toast('Backup was not saved');
   };
   const restore = async (f: File) => {
     try {
@@ -715,7 +777,7 @@ export function HubScreen(props: { nav: Nav; page: HubPage | null; setPage: (p: 
     case 'inbox': return <InboxPage alerts={props.alerts} nav={props.nav} back={back} />;
     case 'laundry': return <LaundryPage back={back} />;
     case 'shop': return <ShopPage back={back} />;
-    case 'stats': return <StatsPage back={back} />;
+    case 'stats': return <ProgressPage back={back} />;
     case 'coach': return <CoachPage back={back} />;
     case 'hairline': return <HairlinePage back={back} />;
     case 'alarm': return <AlarmPage back={back} />;

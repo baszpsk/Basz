@@ -164,11 +164,22 @@ await page.screenshot({ path: 'test/out/10-guide.png', fullPage: true });
 await page.click('.tab:has-text("Hub")');
 await page.waitForTimeout(200);
 await page.screenshot({ path: 'test/out/11-hub.png', fullPage: true });
-for (const name of ['Seoulful', 'Markets', 'Inbox', 'Laundry', 'Shopping', 'Stats', 'Ask Claude', 'Hairline', 'Alarm & sleep', 'Settings']) {
+for (const name of ['Seoulful', 'Markets', 'Inbox', 'Laundry', 'Shopping', 'Progress', 'Ask Claude', 'Hairline', 'Alarm & sleep', 'Settings']) {
   await page.click(`.hubtile:has-text("${name}")`);
   await page.waitForTimeout(250);
   await page.screenshot({ path: `test/out/hub-${name.replace(/[^a-z]/gi, '').toLowerCase()}.png`, fullPage: true });
   await noOverflow(page, 'hub ' + name);
+  if (name === 'Progress') {
+    const txt = await page.locator('.screen').last().innerText();
+    await check(txt.includes('Push-up best set') && txt.includes('Belching') && /vs (yesterday|day before|\d)/.test(txt), 'progress compares metrics with their last value');
+    await check(!/\bXP\b|Level \d/.test(txt), 'progress has no XP or levels');
+    await page.click('.item:has-text("Push-up best set")');
+    await page.waitForTimeout(300);
+    const sheet = await page.locator('.sheet').innerText();
+    await check(sheet.includes('All-time best') && sheet.includes('7 days vs the 7 before'), 'metric sheet shows averages and all-time best');
+    await page.click('.sheet button[aria-label="Close"]');
+    await page.waitForTimeout(200);
+  }
   if (name === 'Markets') {
     const txt = await page.locator('.screen').last().innerText();
     await check(txt.includes('09:40–09:55') && !txt.includes('09:25'), 'markets routine follows the schedule');

@@ -391,7 +391,7 @@ export function TaskSheet(props: { task: Task | null; onClose: () => void; nav: 
       <div class="stack">
         <div class="row wrap" style={{ gap: '8px' }}>
           {live.status !== 'done' && (
-            <button class="btn primary" onClick={(e) => { completeTask(live); sound.done(); burstFrom(e, '+XP'); props.onClose(); }}>
+            <button class="btn primary" onClick={(e) => { completeTask(live); sound.done(); burstFrom(e, ''); props.onClose(); }}>
               {I.check({ size: 18 })} Done
             </button>
           )}
@@ -432,7 +432,7 @@ export function TaskSheet(props: { task: Task | null; onClose: () => void; nav: 
           <div class="card list">
             {live.subtasks.map((x) => (
               <div key={x.id} class={`item ${x.done ? 'done' : ''}`}>
-                <Check on={x.done} label={x.title} onToggle={(e) => { toggleStep(x.id); if (!x.done) burstFrom(e, '+'); }} />
+                <Check on={x.done} label={x.title} onToggle={(e) => { toggleStep(x.id); if (!x.done) burstFrom(e, ''); }} />
                 <div class="t grow">{x.title}</div>
               </div>
             ))}
@@ -473,7 +473,7 @@ export function TaskRow(props: { task: Task; reasons?: string[]; onOpen: () => v
           else {
             completeTask(t);
             sound.done();
-            burstFrom(e, `+${t.impact === 3 ? 40 : t.impact === 2 ? 20 : 10} XP`, toneOf(t.area));
+            burstFrom(e, '', toneOf(t.area));
           }
         }}
       />
