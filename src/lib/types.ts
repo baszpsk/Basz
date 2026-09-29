@@ -139,6 +139,8 @@ export interface DigestItem {
   priority?: 'high' | 'normal' | 'low';
   rating?: number;
   amount?: number;
+  /** Other Gmail message ids folded into this item, so the daily digest skips them next time. */
+  refs?: string[];
 }
 
 export interface Digest {
