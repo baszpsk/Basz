@@ -86,6 +86,9 @@ const moved = await run(new Date('2026-09-29T23:20:00+07:00').getTime(), 'large'
 const txt = JSON.stringify(moved.root);
 if (!txt.includes('ปิดไฟ 00:30')) problems.add('Parameter 00:30 did not move lights-out');
 
+// A tap must open Safari: the Claude app cannot load the app's data.
+if (!/"linkurl":"x-safari-https:\/\/claude\.ai\/artifact\//.test(txt)) problems.add('widget tap does not force Safari');
+
 console.log(`widget: ${runs} renders across ${SIZES.length} sizes`);
 if (problems.size) {
   console.log([...problems].slice(0, 20).join('\n'));

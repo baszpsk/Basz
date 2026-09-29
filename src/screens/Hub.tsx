@@ -800,7 +800,6 @@ export function HubScreen(props: { nav: Nav; page: HubPage | null; setPage: (p: 
           <h1 class="h1">เมนู</h1>
         </div>
       </div>
-      {s.mode === 'local' && <div class="banner">หน้านี้เก็บข้อมูลไว้ในเครื่องนี้เท่านั้น เปิด Basz OS จากลิงก์ของแอปเพื่อซิงก์ข้อมูล</div>}
       <div class="grid2">
         {TILES.map((t) => (
           <button key={t.id} class="glass hubtile" style={{ '--tone': t.tone } as JSX.CSSProperties} onClick={() => props.setPage(t.id)}>

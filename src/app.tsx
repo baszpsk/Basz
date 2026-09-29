@@ -107,6 +107,8 @@ function Shell() {
     [s.tasks, s.digests, s.meta, d.now, d.blocks, d.checks],
   );
 
+  if (s.mode === 'local') return <NoStorage />;
+
   return (
     <div class="app">
       {s.notice && (
@@ -131,6 +133,20 @@ function Shell() {
       <CheckinSheet open={checkin} onClose={() => setCheckin(false)} key={checkin ? 'ci-open' : 'ci'} />
       <PlanSheet open={plan} onClose={() => setPlan(false)} key={plan ? 'pl-open' : 'pl'} />
       <ToastHost />
+    </div>
+  );
+}
+
+// Viewers without artifact storage (the Claude iPhone app, previews) would
+// show an empty app and silently drop anything typed into it.
+function NoStorage() {
+  return (
+    <div class="screen" id="no-storage">
+      <div class="glass pad stack" style={{ marginTop: '10vh' }}>
+        <div class="h2">เปิดจากไอคอน Basz OS</div>
+        <div class="sub">หน้านี้ถูกเปิดในที่ที่อ่านข้อมูลของคุณไม่ได้ เช่น ในแอป Claude บน iPhone ซึ่งยังไม่รองรับการเก็บข้อมูลของแอปแบบนี้ จึงเห็นแอปว่างเหมือนตัวอย่าง และสิ่งที่แก้ตรงนี้จะไม่ถูกบันทึก</div>
+        <div class="sub">แตะไอคอน Basz OS บนหน้าโฮม หรือเปิดลิงก์นี้ใน Safari ข้อมูลทั้งหมดยังอยู่ครบ</div>
+      </div>
     </div>
   );
 }

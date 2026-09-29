@@ -109,5 +109,6 @@
     downloads: { save: async ({ filename }) => { window.__downloads.push(filename); return { status: 'saved' }; } },
     assets: { upload: async (b) => ({ id: 'a' + Date.now(), url: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="30" height="40"><rect width="30" height="40" fill="#888"/></svg>'), sizeBytes: b.size, contentType: 'image/svg+xml' }) },
   };
-  window.claude = { use: (name) => Promise.resolve(caps[name] || null) };
+  // __NO_DB__ mimics viewers without artifact storage, like the Claude iPhone app.
+  window.claude = { use: (name) => Promise.resolve(name === 'db' && window.__NO_DB__ ? null : caps[name] || null) };
 })();

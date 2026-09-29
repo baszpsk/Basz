@@ -7,6 +7,9 @@
 // Countdowns use the system timer so they stay right between refreshes.
 
 const E = BaszEngine;
+// A plain https link opens the Claude app, which cannot load the app's data,
+// so a tap forces Safari instead (iOS 17+ handles x-safari-https).
+const OPEN_URL = BASZ.app.replace(/^https:/, 'x-safari-https:');
 const WD = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
 const MO = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
@@ -254,7 +257,7 @@ function SleepCard(big) {
 // ---------- Sizes ----------
 function root(children, pad, gap) {
   return (
-    <vstack alignment="leading" spacing={gap || '10'} padding={pad || '14'} frame="max,topLeading" background={P.bg} linkurl={BASZ.app}>
+    <vstack alignment="leading" spacing={gap || '10'} padding={pad || '14'} frame="max,topLeading" background={P.bg} linkurl={OPEN_URL}>
       {children}
     </vstack>
   );

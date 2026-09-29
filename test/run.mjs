@@ -38,7 +38,7 @@ seed['digests/' + key(now)] = { date: key(now), items: { e1: { id: 'e1', kind: '
 
 const browser = await chromium.launch();
 const problems = [];
-async function openPage(scheme, width = 430, height = 932) {
+async function openPage(scheme, width = 430, height = 932, noDb = false) {
   const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 2, colorScheme: scheme, hasTouch: true, isMobile: true });
   const page = await ctx.newPage();
   page.on('console', (m) => m.type() === 'error' && problems.push(`[console ${scheme}] ${m.text()}`));
@@ -51,9 +51,9 @@ async function openPage(scheme, width = 430, height = 932) {
   await page.route('https://fonts.googleapis.com/**', (r) => r.fulfill({ contentType: 'text/css', body: '' }));
   await page.route('https://fonts.gstatic.com/**', (r) => r.abort());
   await page.route('https://artifact.test/**', (r) => r.fulfill({ contentType: 'text/html', body: skeleton(html) }));
-  await page.addInitScript(`window.__SEED__ = ${JSON.stringify(seed)};\n${mock}`);
+  await page.addInitScript(`window.__NO_DB__ = ${noDb};\nwindow.__SEED__ = ${JSON.stringify(seed)};\n${mock}`);
   await page.goto('https://artifact.test/');
-  await page.waitForSelector('.tabbar');
+  await page.waitForSelector(noDb ? '#no-storage' : '.tabbar');
   await page.waitForTimeout(400);
   return { ctx, page };
 }
@@ -209,6 +209,11 @@ for (const [name, label] of HUB) {
 const light = await openPage('light', 390, 844);
 await light.page.screenshot({ path: 'test/out/20-today-light.png', fullPage: true });
 await noOverflow(light.page, 'today light 390');
+
+// a viewer without artifact storage explains itself instead of showing an empty app
+const bare = await openPage('light', 390, 844, true);
+await check(bare.page.locator('#no-storage').isVisible(), 'no-storage viewer shows the open-from-icon screen');
+await check(bare.page.locator('.tabbar').count().then((n) => n === 0), 'no-storage viewer hides the app');
 
 await browser.close();
 console.log('\n' + (problems.length ? `PROBLEMS (${problems.length}):\n` + problems.join('\n') : 'ALL CHECKS PASSED'));
