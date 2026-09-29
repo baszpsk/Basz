@@ -17,11 +17,12 @@ src/
   lib/store.ts           cloud sync + local cache + write queue
   lib/schedule.ts        builds the day from settings and the private plan
   lib/priority.ts        explainable task ranking and slotting
-  lib/xp.ts              stats, levels, streaks, trophies, weekly challenges
+  lib/progress.ts        every metric compared with your own past (yesterday, 7/30-day averages, best)
   lib/ai.ts              Claude calls (task parsing, day planning, idea breakdown, coach)
   content/               exercise library, laundry playbook (LG FV1412)
   screens/               Today, Tasks, Body (train, breathe, health), Hub
-test/                    Playwright end-to-end checks with a mocked Claude runtime
+widget/                  Home Screen widget for the ScriptWidget app (same day builder as the app)
+test/                    Playwright end-to-end checks with a mocked Claude runtime, widget checks
 assets/                  app icon
 ```
 
@@ -31,5 +32,13 @@ assets/                  app icon
 npm install
 npm run typecheck
 npm run build      # -> dist/basz-os.html (one file)
-npm test           # iPhone-size checks in dark and light themes
+npm test           # widget checks, then iPhone-size checks in dark and light themes
+npm run widget     # -> dist/widget/Basz OS.swt
 ```
+
+## Home Screen widget
+
+เว็บแอปทำวิดเจ็ตเองไม่ได้ (iOS ให้เฉพาะแอปจาก App Store) จึงใช้แอปฟรี **ScriptWidget** เป็นตัวแสดง
+ไฟล์ `Basz OS.swt` มีตารางวันแบบเดียวกับแอป (โค้ด `buildDay` ตัวเดียวกัน) + ตั้งค่า + ชื่อยา ไม่มีสิทธิ์ใช้เน็ต
+แสดงได้ 2×2, 4×2, 4×4, 4×6 (iOS 27) และหน้าล็อก เปลี่ยนเป็นโหมดกลางคืนตอนถึงเวลาผ่อนคลายก่อนนอน
+และไม่แสดงนับถอยหลังหลังปิดไฟ ถ้าเวลาปิดไฟเปลี่ยน ใส่เวลาใหม่ในช่อง Parameter ของวิดเจ็ต (เช่น `00:45`)

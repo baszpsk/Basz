@@ -3,24 +3,10 @@
 // server yet, so nothing is lost if the page closes or the network drops.
 
 import { cap, errCode } from './claude';
+import { DEFAULT_SETTINGS } from './defaults';
 import type { Digest, MonthLog, Plan, Settings, ShopItem, Task } from './types';
 
-export const DEFAULT_SETTINGS: Settings = {
-  wake: '09:30',
-  lightsOut: '01:00',
-  meal1: '10:30',
-  meal2: '19:00',
-  workoutTime: '13:00',
-  workoutDays: [1, 3, 5],
-  rolloverHour: 6,
-  focus: { work: 25, short: 5, long: 15, every: 4, autoBreak: true },
-  coffeeCutoff: '13:00',
-  dryHours: 8,
-  proteinTarget: 110,
-  breathTargetMin: 30,
-  stepsTarget: 8000,
-  tradingDays: [1, 2, 3, 4, 5],
-};
+export { DEFAULT_SETTINGS };
 
 export interface Meta {
   seen?: Record<string, number>;
