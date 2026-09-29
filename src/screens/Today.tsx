@@ -1,7 +1,7 @@
 import { Fragment, type JSX } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { I } from '../components/icons';
-import { burstFrom, Check, Glass, Pill, Progress, Ring, Sheet, toast, toneOf } from '../components/ui';
+import { burstFrom, Check, CountUp, Glass, Pill, Progress, Ring, Sheet, toast, toneOf } from '../components/ui';
 import { completeTask, patchDay, saveTask, setCheck, snooze } from '../lib/actions';
 import { copyForError, planDay, sampleCap } from '../lib/ai';
 import type { Alert } from '../lib/alerts';
@@ -402,7 +402,7 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
       <div class="topbar">
         <div class="grow">
           <div class="eyebrow">{fmtDayLong(today)} · {pad(now.getHours())}:{pad(now.getMinutes())}</div>
-          <h1 class="h1">{greeting(now.getHours())}, {name}</h1>
+          <h1 class="h1 hello">{greeting(now.getHours())}, <span class="name">{name}</span></h1>
         </div>
         <button class="icon-btn" aria-label={`Notifications (${unread})`} onClick={props.nav.inbox}>
           {I.bell({ size: 20 })}
@@ -419,19 +419,19 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
       <AlertsStrip alerts={props.alerts} nav={props.nav} />
 
       <div class="tiles">
-        <div class="tile">
+        <div class="tile" style={{ '--tone': 'var(--good)' } as JSX.CSSProperties}>
           <div class="k">ROUTINE</div>
-          <div class="v">{doneItems}<span class="tiny">/{allItems.length}</span></div>
+          <div class="v"><CountUp value={doneItems} /><span class="tiny">/{allItems.length}</span></div>
           <Progress value={allItems.length ? doneItems / allItems.length : 0} tone="var(--good)" label="Routine done" />
         </div>
-        <div class="tile">
+        <div class="tile" style={{ '--tone': 'var(--accent)' } as JSX.CSSProperties}>
           <div class="k">TASKS DONE</div>
-          <div class="v">{stats.tasks.doneToday}</div>
+          <div class="v"><CountUp value={stats.tasks.doneToday} /></div>
           <div class="tiny">{stats.tasks.doneWeek} this week</div>
         </div>
-        <div class="tile">
+        <div class="tile" style={{ '--tone': 'var(--a-seoulful)' } as JSX.CSSProperties}>
           <div class="k">XP TODAY</div>
-          <div class="v">{stats.todayXp}</div>
+          <div class="v"><CountUp value={stats.todayXp} /></div>
           <div class="tiny row" style={{ gap: '4px' }}><span style={{ color: 'var(--warn)' }}>{I.flame({ size: 14 })}</span>{stats.sleep.streak} night streak</div>
         </div>
       </div>

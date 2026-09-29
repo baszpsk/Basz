@@ -151,7 +151,12 @@ export function App() {
   }
   return (
     <>
-      <div class="sky" aria-hidden="true" />
+      <div class="sky" aria-hidden="true">
+        <i class="b1" />
+        <i class="b2" />
+        <i class="b3" />
+        <i class="b4" />
+      </div>
       <div class="sky-scrim" aria-hidden="true" />
       <div class="host-blend" aria-hidden="true" />
       <Shell />

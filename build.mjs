@@ -48,10 +48,10 @@ const style = css.outputFiles[0].text;
 const splash = readFileSync('src/splash.html', 'utf8');
 
 const html = `<title>Basz OS</title>
-<meta name="theme-color" content="#070b12">
+<meta name="theme-color" content="#f2f6fc">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300..700&family=Unbounded:wght@400..700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300..700&family=Plus+Jakarta+Sans:wght@400..800&display=swap">
 <style>${style}</style>
 <div id="app">${splash}</div>
 <script src="https://cdn.jsdelivr.net/npm/preact@${PREACT}/dist/preact.umd.js"></script>

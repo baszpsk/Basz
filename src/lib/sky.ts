@@ -1,19 +1,20 @@
-// The background sky follows the real time of day in Bangkok: dawn, day,
-// dusk, night. Colors are set as CSS variables on :root.
+// The background is a bright color field that follows the time of day in
+// Bangkok: warm at dawn, fresh in the morning, clear at midday, golden in
+// the afternoon, rosy in the evening, soft lilac at night. Four blob colors
+// are set as CSS variables on :root and mixed smoothly between stops.
 
-type Stop = [number, string, string, string];
-// [minute of day, top, middle, glow]
+type Stop = [number, string, string, string, string];
+// [minute of day, blob 1, blob 2, blob 3, blob 4]
 const STOPS: Stop[] = [
-  [0, '#060913', '#0d1633', '#2a2466'],
-  [330, '#0b1230', '#2c2a5e', '#b0577a'],
-  [400, '#23325f', '#e0826b', '#ffc98b'],
-  [480, '#2f6fd1', '#7cc3ff', '#ffe2a8'],
-  [720, '#1d73de', '#53b5ff', '#aef0ff'],
-  [930, '#2a5ec6', '#f0a765', '#ffd9a0'],
-  [1065, '#2b1f5c', '#df5f7c', '#ffa56b'],
-  [1150, '#101a3d', '#322f7a', '#7a4aa0'],
-  [1290, '#070b18', '#10183a', '#3a2f78'],
-  [1440, '#060913', '#0d1633', '#2a2466'],
+  [0, '#a78bfa', '#7f9cff', '#f59ad0', '#5fd4d0'],
+  [300, '#a78bfa', '#7f9cff', '#f59ad0', '#5fd4d0'],
+  [390, '#ffb38a', '#ffe27a', '#ff8fb1', '#8fd3ff'],
+  [540, '#6cc6ff', '#ffe066', '#5ee0b8', '#ffb38a'],
+  [780, '#4dd4ff', '#ffe066', '#43e0a8', '#8ea8ff'],
+  [990, '#ffae5c', '#ffd84d', '#ff7eb3', '#7cc8ff'],
+  [1140, '#ff8a7a', '#b49cff', '#ff85c0', '#7fb8ff'],
+  [1290, '#a78bfa', '#7f9cff', '#f59ad0', '#5fd4d0'],
+  [1440, '#a78bfa', '#7f9cff', '#f59ad0', '#5fd4d0'],
 ];
 
 const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
@@ -23,20 +24,18 @@ const mix = (a: string, b: string, t: number) => {
   return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * t)).join(',')})`;
 };
 
-export function skyAt(minute: number) {
+export function skyAt(minute: number): string[] {
   const m = ((minute % 1440) + 1440) % 1440;
   let i = 0;
   while (i < STOPS.length - 1 && STOPS[i + 1][0] <= m) i++;
   const a = STOPS[i];
   const b = STOPS[Math.min(i + 1, STOPS.length - 1)];
   const t = b[0] === a[0] ? 0 : (m - a[0]) / (b[0] - a[0]);
-  return { top: mix(a[1], b[1], t), mid: mix(a[2], b[2], t), glow: mix(a[3], b[3], t) };
+  return [1, 2, 3, 4].map((k) => mix(a[k] as string, b[k] as string, t));
 }
 
 export function paintSky(now = new Date()) {
-  const s = skyAt(now.getHours() * 60 + now.getMinutes());
+  const colors = skyAt(now.getHours() * 60 + now.getMinutes());
   const r = document.documentElement.style;
-  r.setProperty('--sky-top', s.top);
-  r.setProperty('--sky-mid', s.mid);
-  r.setProperty('--sky-glow', s.glow);
+  colors.forEach((c, i) => r.setProperty(`--b${i + 1}`, c));
 }

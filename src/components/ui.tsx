@@ -148,6 +148,37 @@ export function Empty(props: { title: string; body?: string; children?: Componen
   );
 }
 
+/** A number that counts up from its last value (from 0 on first show). */
+export function CountUp(props: { value: number; ms?: number }) {
+  const reduce = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const [shown, setShown] = useState(reduce ? props.value : 0);
+  const last = useRef(reduce ? props.value : 0);
+  useEffect(() => {
+    const from = last.current;
+    const to = props.value;
+    if (reduce || from === to) {
+      last.current = to;
+      setShown(to);
+      return;
+    }
+    const t0 = performance.now();
+    const dur = props.ms ?? 700;
+    let raf = 0;
+    const step = (t: number) => {
+      const p = Math.min(1, (t - t0) / dur);
+      setShown(Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(step);
+      else last.current = to;
+    };
+    raf = requestAnimationFrame(step);
+    return () => {
+      cancelAnimationFrame(raf);
+      last.current = to;
+    };
+  }, [props.value]);
+  return <>{shown}</>;
+}
+
 export function Pill(props: { tone?: string; children: ComponentChildren }) {
   return (
     <span class="pill" style={{ '--tone': props.tone } as JSX.CSSProperties}>
