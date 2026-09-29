@@ -153,6 +153,7 @@ export function App() {
     <>
       <div class="sky" aria-hidden="true" />
       <div class="sky-scrim" aria-hidden="true" />
+      <div class="host-blend" aria-hidden="true" />
       <Shell />
     </>
   );
