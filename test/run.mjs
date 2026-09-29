@@ -160,6 +160,10 @@ for (const name of ['Seoulful', 'Markets', 'Inbox', 'Laundry', 'Shopping', 'Stat
   await page.waitForTimeout(250);
   await page.screenshot({ path: `test/out/hub-${name.replace(/[^a-z]/gi, '').toLowerCase()}.png`, fullPage: true });
   await noOverflow(page, 'hub ' + name);
+  if (name === 'Markets') {
+    const txt = await page.locator('.screen').last().innerText();
+    await check(txt.includes('09:40–09:55') && !txt.includes('09:25'), 'markets routine follows the schedule');
+  }
   if (name === 'Laundry') {
     const btn = page.locator('.screen button.btn.primary:has-text("Start")');
     if (await btn.isDisabled()) await page.click('.item:has-text("Towels & bedding") .check');

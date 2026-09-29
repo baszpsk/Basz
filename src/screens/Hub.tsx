@@ -12,7 +12,8 @@ import { useNow, useStore } from '../lib/hooks';
 import type { HubPage, Nav } from '../lib/nav';
 import { sound } from '../lib/sound';
 import { store } from '../lib/store';
-import { addDays, fmtShortDate, parseHM as parseHMx, relTime, todayKey, wdName } from '../lib/time';
+import { buildDay } from '../lib/schedule';
+import { addDays, fmtHM, fmtShortDate, parseHM as parseHMx, relTime, todayKey, wdName, weekday } from '../lib/time';
 import type { DigestItem, ShopItem } from '../lib/types';
 import { computeStats } from '../lib/xp';
 
@@ -85,9 +86,10 @@ function useDigestItems(kinds: DigestItem['kind'][], days = 7) {
   }, [s.digests]);
 }
 
-const NOT_CONNECTED = (what: string) => (
-  <Empty title={`No ${what} yet`} body="Claude จะเติมส่วนนี้ให้อัตโนมัติทุกเช้า หลังจากคุณเชื่อม Gmail กับ Claude (ขั้นตอนอยู่ในแชท)" />
+const NOT_CONNECTED = (what: string, body = 'Claude สรุปจาก Gmail ให้ทุกเช้าก่อนคุณตื่น รายการแรกจะขึ้นหลังรอบถัดไป') => (
+  <Empty title={`No ${what} yet`} body={body} />
 );
+const FROM_COMPANY = 'อีเมลแจ้งยอดขายและรีวิวส่งเข้าเมลบริษัท ส่วนนี้จะเริ่มมีข้อมูลหลังตั้ง forward เมลบริษัทมาที่เมลส่วนตัว (ขั้นตอนอยู่ในแชท)';
 
 function SeoulfulPage(props: { nav: Nav; back: () => void }) {
   const s = useStore();
@@ -107,9 +109,9 @@ function SeoulfulPage(props: { nav: Nav; back: () => void }) {
         <div class="tile"><div class="k">REVIEWS · 14D</div><div class="v">{reviews.length}{avg.length ? <span class="tiny"> · {(avg.reduce((a, b) => a + b, 0) / avg.length).toFixed(1)}★</span> : ''}</div></div>
       </div>
       <div class="section-head"><h2 class="h2">Sales</h2></div>
-      <DigestList items={sales} empty={NOT_CONNECTED('sales summary')} />
+      <DigestList items={sales} empty={NOT_CONNECTED('sales summary', FROM_COMPANY)} />
       <div class="section-head"><h2 class="h2">Reviews & ratings</h2></div>
-      <DigestList items={reviews} empty={NOT_CONNECTED('reviews')} />
+      <DigestList items={reviews} empty={NOT_CONNECTED('reviews', FROM_COMPANY)} />
       <div class="section-head"><h2 class="h2">Ideas → tasks</h2></div>
       <Glass class="pad stack-sm">
         <textarea id="idea-box" class="textarea" placeholder="เช่น อยากเพิ่มเมนูซุปกิมจิชีส ขายช่วงหน้าฝน" value={idea} onInput={(e) => setIdea((e.target as HTMLTextAreaElement).value)} />
@@ -142,19 +144,22 @@ function SeoulfulPage(props: { nav: Nav; back: () => void }) {
 }
 
 function MarketsPage(props: { back: () => void }) {
+  const s = useStore();
+  const now = useNow(60000);
   const news = useDigestItems(['news'], 7);
+  // The trading blocks of today, or of the next trading day, straight from the scheduler.
+  const trade = useMemo(() => {
+    let key = todayKey(now, s.settings.rolloverHour);
+    for (let i = 0; i < 7 && !s.settings.tradingDays.includes(weekday(key)); i++) key = addDays(key, 1);
+    return buildDay(key, s.settings, s.plan).filter((b) => b.kind === 'trade');
+  }, [s.settings, s.plan, todayKey(now, s.settings.rolloverHour)]);
   return (
     <div class="screen">
       <PageHead title="Markets" eyebrow="SET · mai" onBack={props.back} />
       <Glass class="pad stack-sm">
         <div class="h3">Your trading routine</div>
         <div class="list">
-          {[
-            ['16:35–18:45', 'Homework', 'ทำแผนของพรุ่งนี้ให้เสร็จตอนหัวยังสด'],
-            ['09:25–09:40', 'Review plan', 'อ่านแผนที่ทำไว้ ไม่ตัดสินใจใหม่ตอนเพิ่งตื่น'],
-            ['09:40–09:55', 'Place orders', 'ส่งตามแผนในช่วง Pre-open'],
-            ['10:00–10:20', 'Watch the open', 'ไม่เกิน 30 นาที แล้วปิดจอ'],
-          ].map(([t, a, b]) => (
+          {trade.map((b) => [`${fmtHM(b.start)}–${fmtHM(b.end)}`, b.title, b.sub || '']).map(([t, a, b]) => (
             <div key={a} class="item" style={{ padding: '10px 2px' }}>
               <span class="tiny num" style={{ width: '92px' }}>{t}</span>
               <div class="grow"><div class="t">{a}</div><div class="d">{b}</div></div>
@@ -162,8 +167,8 @@ function MarketsPage(props: { back: () => void }) {
           ))}
         </div>
       </Glass>
-      <div class="section-head"><h2 class="h2">SET official news</h2><span class="tiny">สรุปโดย Claude</span></div>
-      <DigestList items={news} empty={<Empty title="No news digest yet" body="Claude จะสรุปข่าวทางการจาก SET ให้ทุกวันทำการ หลังเปิดสิทธิ์เข้าเว็บ set.or.th ให้ session (ขั้นตอนอยู่ในแชท)" />} />
+      <div class="section-head"><h2 class="h2">Market news</h2><span class="tiny">สรุปโดย Claude</span></div>
+      <DigestList items={news} empty={<Empty title="No news digest yet" body="เว็บ set.or.th และ settrade.com ปิดกั้นระบบอัตโนมัติทุกตัว Claude จึงดึงข่าวทางการมาสรุปเองไม่ได้ ข่าวที่ส่งเข้า Gmail (เช่นจากโบรกเกอร์) จะถูกสรุปขึ้นที่นี่" />} />
     </div>
   );
 }
