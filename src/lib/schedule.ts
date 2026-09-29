@@ -4,7 +4,7 @@
 
 import { programForDay } from '../content/exercises';
 import { LOADS } from '../content/laundry';
-import { parseHM, weekday } from './time';
+import { fmtHM, parseHM, weekday } from './time';
 import type { Area, DayLog, Med, Plan, Settings } from './types';
 
 export interface CheckItem { id: string; label: string; hint?: string; kind: 'med' | 'habit' | 'food' | 'care' | 'trade' | 'home' }
@@ -55,18 +55,25 @@ export function buildDay(key: string, st: Settings, plan: Plan | null, log?: Day
   const out: Block[] = [];
   const add = (b: Block) => b.end > b.start && out.push(b);
 
+  // On trading days a late wake-up leaves only minutes before the 09:40
+  // orders, so daylight and skincare move to right after the open.
+  const ORDERS = parseHM('09:40', R);
+  const squeeze = trading && W < ORDERS && W + 20 > ORDERS;
+  const fresh: CheckItem[] = [
+    { id: 'light', label: 'Daylight 5–10 min', hint: 'เปิดม่านหรือออกไปรับแสงจริง ช่วยตั้งนาฬิกาชีวิต', kind: 'habit' },
+    { id: 'skin-am', label: 'Face wash + sunscreen', hint: 'คลีนเซอร์อ่อน → มอยส์เจอไรเซอร์ → กันแดดยาว 2 นิ้ว', kind: 'care' },
+  ];
   add({
     id: 'wake',
     start: W,
-    end: W + 20,
+    end: squeeze ? ORDERS : W + 20,
     kind: 'wake',
     title: recovery ? 'Recovery morning' : 'Wake up',
-    sub: recovery ? 'ตื่นไม่เกิน 13:00 · รับแสงแดดทันที · ห้ามงีบหลัง 16:00' : 'ยา · น้ำ · แสงแดด · กันแดด',
+    sub: recovery ? 'ตื่นไม่เกิน 13:00 · รับแสงแดดทันที · ห้ามงีบหลัง 16:00' : squeeze ? 'ยา · น้ำ · เปิดแผนเทรดที่ทำไว้' : 'ยา · น้ำ · แสงแดด · กันแดด',
     area: 'health',
     items: [
       { id: 'water', label: 'Glass of water', hint: 'น้ำเปล่า 1 แก้ว จิบช้าๆ ไม่ดื่มรวดเดียว', kind: 'habit' },
-      { id: 'light', label: 'Daylight 5–10 min', hint: 'เปิดม่านหรือออกไปรับแสงจริง ช่วยตั้งนาฬิกาชีวิต', kind: 'habit' },
-      { id: 'skin-am', label: 'Face wash + sunscreen', hint: 'คลีนเซอร์อ่อน → มอยส์เจอไรเซอร์ → กันแดดยาว 2 นิ้ว', kind: 'care' },
+      ...(squeeze ? [] : fresh),
       ...(recovery ? [{ id: 'recover', label: 'Rehydrate + light meal', hint: 'น้ำ + อาหารย่อยง่ายไม่มัน ไม่ต้องทดแทนการนอนด้วยการงีบยาว', kind: 'habit' as const }] : []),
     ],
   });
@@ -80,6 +87,12 @@ export function buildDay(key: string, st: Settings, plan: Plan | null, log?: Day
       items: [{ id: 'orders', label: 'Orders sent as planned', hint: 'ส่งตามแผนเท่านั้น ถ้าจะเปลี่ยนแผนให้จดเหตุผล', kind: 'trade' }],
     });
     add({ id: 'trade-open', start: parseHM('10:00', R), end: parseHM('10:20', R), kind: 'trade', area: 'trading', title: 'Watch the open', sub: 'ดูไม่เกิน 30 นาที แล้วปิดจอ' });
+    if (squeeze) {
+      const fs = parseHM('10:20', R);
+      const fe = Math.min(M1, fs + 15);
+      if (fe - fs >= 5) add({ id: 'fresh', start: fs, end: fe, kind: 'wake', area: 'health', title: 'Fresh start', sub: 'รับแสงจริง 5–10 นาที · ล้างหน้า + กันแดด', items: fresh });
+      else out[0].items = [...(out[0].items || []), ...fresh];
+    }
   } else {
     add({ id: 'slow', start: W + 20, end: M1, kind: 'break', title: 'Slow morning', sub: 'ตลาดปิด · เวลาของคุณเอง' });
   }
@@ -122,7 +135,7 @@ export function buildDay(key: string, st: Settings, plan: Plan | null, log?: Day
     });
 
   add({
-    id: 'meal2', start: M2 - 15, end: M2 + 40, kind: 'meal', area: 'health', title: 'Dinner', sub: 'มื้อสุดท้ายของวัน · ไขมันต่ำ · ครัวปิด 21:30',
+    id: 'meal2', start: M2 - 15, end: M2 + 40, kind: 'meal', area: 'health', title: 'Dinner', sub: `มื้อสุดท้ายของวัน · ไขมันต่ำ · ครัวปิด ${fmtHM(L - 180)}`,
     items: [{ id: 'protein3', label: 'Protein ≥30 g, low fat', hint: 'ย่าง/ต้ม/นึ่ง ดีกว่าทอด ลดหมูสามชั้นมื้อเย็น', kind: 'food' }],
   });
   add({ id: 'walkbreath', start: M2 + 40, end: M2 + 60, kind: 'move', area: 'health', title: 'Walk + breathing', sub: 'เดินเบาๆ 10 นาที แล้วนั่งหายใจท้อง · ห้ามนอนราบ 3 ชม.', action: 'breath', items: [{ id: 'walk-pm', label: 'Easy walk 10 min', kind: 'habit' }, { id: 'breath-pm', label: 'Breathing 15 min', kind: 'habit' }] });
@@ -155,7 +168,7 @@ export function buildDay(key: string, st: Settings, plan: Plan | null, log?: Day
     });
   }
   add({
-    id: 'read', start: L - 30, end: L, kind: 'wind', area: 'health', title: 'Read · breathe', sub: 'แสงสลัว · หายใจท้อง 10 นาที · ตะแคงซ้าย', action: 'breath',
+    id: 'read', start: L - 30, end: L, kind: 'wind', area: 'health', title: 'Read · breathe', sub: 'นั่งนอกเตียง แสงสลัว หายใจท้อง 10 นาที · ครบเวลาแล้วขึ้นเตียง ปิดไฟ นอนตะแคงซ้าย', action: 'breath',
     items: [{ id: 'breath-night', label: 'Breathing 10 min', kind: 'habit' }, { id: 'lights-out', label: 'Lights out on time', kind: 'habit' }],
   });
   add({ id: 'sleep', start: L, end: W + 1440, kind: 'sleep', area: 'health', title: 'Sleep', sub: 'ถ้า 20 นาทียังไม่หลับ ลุกไปนั่งที่แสงสลัว ง่วงแล้วค่อยกลับเตียง' });

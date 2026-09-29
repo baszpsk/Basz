@@ -6,15 +6,15 @@ import { cap, errCode } from './claude';
 import type { Digest, MonthLog, Plan, Settings, ShopItem, Task } from './types';
 
 export const DEFAULT_SETTINGS: Settings = {
-  wake: '09:00',
-  lightsOut: '00:30',
-  meal1: '10:20',
+  wake: '09:30',
+  lightsOut: '01:00',
+  meal1: '10:30',
   meal2: '19:00',
   workoutTime: '13:00',
   workoutDays: [1, 3, 5],
   rolloverHour: 6,
   focus: { work: 25, short: 5, long: 15, every: 4, autoBreak: true },
-  coffeeCutoff: '15:30',
+  coffeeCutoff: '16:00',
   dryHours: 8,
   proteinTarget: 110,
   breathTargetMin: 30,

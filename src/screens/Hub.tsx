@@ -12,7 +12,7 @@ import { useNow, useStore } from '../lib/hooks';
 import type { HubPage, Nav } from '../lib/nav';
 import { sound } from '../lib/sound';
 import { store } from '../lib/store';
-import { addDays, fmtShortDate, relTime, todayKey, wdName } from '../lib/time';
+import { addDays, fmtShortDate, parseHM as parseHMx, relTime, todayKey, wdName } from '../lib/time';
 import type { DigestItem, ShopItem } from '../lib/types';
 import { computeStats } from '../lib/xp';
 
@@ -539,6 +539,8 @@ function HairlinePage(props: { back: () => void }) {
 
 function AlarmPage(props: { back: () => void }) {
   const s = useStore();
+  const R = s.settings.rolloverHour;
+  const inBed = (parseHMx(s.settings.wake, R) + 1440 - parseHMx(s.settings.lightsOut, R)) / 60;
   return (
     <div class="screen">
       <PageHead title="Alarm & sleep" eyebrow={`Lights out ${s.settings.lightsOut} · wake ${s.settings.wake}`} onBack={props.back} />
@@ -556,8 +558,8 @@ function AlarmPage(props: { back: () => void }) {
         </ul>
       </Glass>
       <Glass class="pad stack-sm">
-        <div class="h3">ทำไมตื่น {s.settings.wake}</div>
-        <div class="sub">อยู่บนเตียง 8.5 ชม. ได้การนอนจริงราว 7.5–8 ชม. และมีเวลา 40 นาทีให้สมองตื่นเต็มที่และให้อาการง่วงค้างจากยาก่อนนอนจางลง ก่อนส่งคำสั่งซื้อ 09:40 ถ้าอยากกลับไปตื่น 09:30 เปลี่ยนได้ในหน้า Settings แล้วเวลาเข้านอนควรเลื่อนเป็น 01:00 ด้วย</div>
+        <div class="h3">Your sleep window</div>
+        <div class="sub">ขึ้นเตียงและปิดไฟ {s.settings.lightsOut} · ตื่น {s.settings.wake} · อยู่บนเตียง {inBed.toFixed(1)} ชม. เป้าหมายหลับจริงราว {(inBed - 0.5).toFixed(1)} ชม. (หักเวลาก่อนหลับราว 15 นาทีและตื่นกลางดึกสั้นๆ) เวลาตื่นที่เท่ากันทุกวันสำคัญกว่าจำนวนชั่วโมง</div>
       </Glass>
     </div>
   );

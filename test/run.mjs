@@ -81,7 +81,7 @@ await page.fill('#today-composer', 'โทรหาซัพพลายเอ�
 await page.keyboard.press('Enter');
 await page.waitForSelector('text=ต้องได้คำตอบภายในวันไหน?');
 await page.screenshot({ path: 'test/out/02-add-question.png' });
-await page.click('text=พรุ่งนี้');
+await page.click('.sheet .chip:has-text("พรุ่งนี้")');
 await page.waitForFunction(() => !document.body.textContent.includes('ต้องได้คำตอบภายในวันไหน?'));
 await page.waitForTimeout(200);
 await page.screenshot({ path: 'test/out/03-add-ready.png' });
