@@ -13,7 +13,8 @@ import type { HubPage, Nav } from '../lib/nav';
 import { sound } from '../lib/sound';
 import { store } from '../lib/store';
 import { buildDay } from '../lib/schedule';
-import { addDays, fmtHM, fmtShortDate, parseHM as parseHMx, relTime, todayKey, wdName, weekday } from '../lib/time';
+import { caffeineCutoff, MIN_NIGHTS, sleepAdvice } from '../lib/sleepcoach';
+import { addDays, fmtHM, fmtShortDate, monthOf, parseHM as parseHMx, relTime, todayKey, wdName, weekday } from '../lib/time';
 import type { DigestItem, ShopItem } from '../lib/types';
 import { computeStats } from '../lib/xp';
 
@@ -186,8 +187,8 @@ function InboxPage(props: { alerts: Alert[]; nav: Nav; back: () => void }) {
       />
       <Glass class="list">
         {all.filter((a) => a.kind !== 'digest').length ? all.filter((a) => a.kind !== 'digest').map((a) => (
-          <button key={a.id} class="item" onClick={() => a.task && props.nav.task(a.task)}>
-            <span style={{ color: a.urgent ? 'var(--warn)' : 'var(--ink-3)' }}>{a.kind === 'med' ? I.pill() : a.kind === 'flow' ? I.shirt() : a.kind === 'followup' ? I.user() : I.clock()}</span>
+          <button key={a.id} class="item" onClick={() => (a.kind === 'sleep' ? props.nav.hub('alarm') : a.task && props.nav.task(a.task))}>
+            <span style={{ color: a.urgent ? 'var(--warn)' : 'var(--ink-3)' }}>{a.kind === 'med' ? I.pill() : a.kind === 'flow' ? I.shirt() : a.kind === 'followup' ? I.user() : a.kind === 'sleep' ? I.moon() : I.clock()}</span>
             <div class="grow"><div class="t">{a.title}</div>{a.body && <div class="d">{a.body}</div>}</div>
           </button>
         )) : <Empty title="All clear" body="ไม่มีงานที่เลยกำหนดหรือรอติดตาม" />}
@@ -542,6 +543,46 @@ function HairlinePage(props: { back: () => void }) {
   );
 }
 
+function SleepCoach() {
+  const s = useStore();
+  const now = useNow(60000);
+  const today = todayKey(now, s.settings.rolloverHour);
+  const a = sleepAdvice((day) => s.logs[monthOf(day)]?.days?.[day], s.settings, today, s.meta.sleepWindowFrom);
+  const h = (m: number) => (m / 60).toFixed(1);
+  const pct = Math.round(a.efficiency * 100);
+  const apply = () => {
+    if (!a.next) return;
+    saveSettings({ lightsOut: a.next });
+    saveMeta({ sleepWindowFrom: today });
+    sound.done();
+    toast(`Lights out ${a.next} from tonight`);
+  };
+  const text: Record<typeof a.action, string> = {
+    log: `ตอบ 2 ข้อแรกในเช็คอินทุกเช้า (ใช้เวลากว่าจะหลับ และตื่นกลางดึกรวม) อีก ${Math.max(0, MIN_NIGHTS - a.nights)} คืน แล้วแอปจะบอกว่าควรเลื่อนเวลาปิดไฟหรือไม่`,
+    earlier: `หลับเร็วและหลับยาว ประสิทธิภาพการนอน ${pct}% ร่างกายพร้อมนอนนานขึ้น เลื่อนปิดไฟเร็วขึ้น 15 นาทีเป็น ${a.next} แล้วดูผลอีก ${MIN_NIGHTS} คืน`,
+    keep: `ประสิทธิภาพการนอน ${pct}% คงเวลาเดิมไว้ก่อน จะเลื่อนเร็วขึ้นได้เมื่อหลับภายใน 20 นาที และหลับได้อย่างน้อย 90% ของเวลาบนเตียง`,
+    later: `ใช้เวลาตื่นอยู่บนเตียงรวมเฉลี่ย ${a.latency + a.awake} นาที (ประสิทธิภาพ ${pct}%) เลื่อนปิดไฟช้าลง 15 นาทีเป็น ${a.next} ช่วยให้หลับเร็วและลึกขึ้น พอดีขึ้นแล้วแอปจะพาเลื่อนกลับ`,
+    max: `อยู่บนเตียงครบ 10 ชม. แล้ว ไม่เลื่อนเร็วกว่านี้`,
+  };
+  return (
+    <Glass class="pad stack-sm">
+      <div class="row between">
+        <div class="h3">Sleep window coach</div>
+        <span class="tiny num">{a.nights}/7 nights</span>
+      </div>
+      {a.nights > 0 && (
+        <div class="tiles">
+          <div class="tile" style={{ '--tone': 'var(--a-home)' } as JSX.CSSProperties}><div class="k">FALL ASLEEP</div><div class="v">{a.latency}<span class="tiny"> min</span></div></div>
+          <div class="tile" style={{ '--tone': 'var(--a-personal)' } as JSX.CSSProperties}><div class="k">AWAKE</div><div class="v">{a.awake}<span class="tiny"> min</span></div></div>
+          <div class="tile" style={{ '--tone': 'var(--good)' } as JSX.CSSProperties}><div class="k">ASLEEP</div><div class="v">{h(a.asleep)}<span class="tiny"> h</span></div></div>
+        </div>
+      )}
+      <div class="sub">{text[a.action]}</div>
+      {a.next && <button class="btn primary block" onClick={apply}>{I.moon({ size: 18 })} Move lights out to {a.next}</button>}
+    </Glass>
+  );
+}
+
 function AlarmPage(props: { back: () => void }) {
   const s = useStore();
   const R = s.settings.rolloverHour;
@@ -565,7 +606,9 @@ function AlarmPage(props: { back: () => void }) {
       <Glass class="pad stack-sm">
         <div class="h3">Your sleep window</div>
         <div class="sub">ขึ้นเตียงและปิดไฟ {s.settings.lightsOut} · ตื่น {s.settings.wake} · อยู่บนเตียง {inBed.toFixed(1)} ชม. เป้าหมายหลับจริงราว {(inBed - 0.5).toFixed(1)} ชม. (หักเวลาก่อนหลับราว 15 นาทีและตื่นกลางดึกสั้นๆ) เวลาตื่นที่เท่ากันทุกวันสำคัญกว่าจำนวนชั่วโมง</div>
+        <div class="tiny">คาเฟอีนแก้วสุดท้ายก่อน {caffeineCutoff(s.settings)} (12 ชม. ก่อนปิดไฟ)</div>
       </Glass>
+      <SleepCoach />
     </div>
   );
 }
@@ -627,7 +670,10 @@ function SettingsPage(props: { back: () => void }) {
           {time('meal1', 'Brunch')}
           {time('meal2', 'Dinner')}
           {time('workoutTime', 'Workout')}
-          {time('coffeeCutoff', 'Caffeine cut-off')}
+          <div class="field">
+            <label>Caffeine cut-off</label>
+            <div class="input" style={{ background: 'transparent' }}>{caffeineCutoff(st)} · 12 h before lights out</div>
+          </div>
         </div>
         <div class="tiny">มื้อแรกควรห่างจากยาก่อนอาหารเช้า 30–60 นาที มื้อเย็นต้องเสร็จก่อนนอนอย่างน้อย 3 ชม.</div>
         {days('workoutDays', 'Workout days')}

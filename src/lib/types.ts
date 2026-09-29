@@ -72,7 +72,8 @@ export interface Plan {
 
 export interface DayLog {
   checks?: Record<string, number | null>;
-  sleep?: { bed?: string; wake?: string; quality?: number };
+  /** Last night: latency = minutes to fall asleep, awake = minutes awake after that. */
+  sleep?: { bed?: string; wake?: string; quality?: number; latency?: number; awake?: number };
   symptoms?: { belch?: number; heartburn?: number; energy?: number; mood?: number };
   steps?: number;
   protein?: number;

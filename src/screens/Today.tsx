@@ -9,6 +9,7 @@ import { useNow, useStore } from '../lib/hooks';
 import type { Nav } from '../lib/nav';
 import { AREA_LABEL, rankTasks, slotTasks } from '../lib/priority';
 import { buildDay, currentBlock, type Block } from '../lib/schedule';
+import { caffeineCutoff } from '../lib/sleepcoach';
 import { sound } from '../lib/sound';
 import { addDays, dateKey, fmtDayLong, fmtDuration, fmtHM, logicalMinutes, monthOf, pad, parseHM, todayKey } from '../lib/time';
 import type { DayLog, Task } from '../lib/types';
@@ -167,7 +168,7 @@ function AlertsStrip(props: { alerts: Alert[]; nav: Nav }) {
     <Glass class="list">
       {list.map((a) => (
         <div key={a.id} class="item">
-          <span style={{ color: a.urgent ? 'var(--warn)' : 'var(--ink-2)' }}>{a.kind === 'med' ? I.pill() : a.kind === 'flow' ? I.shirt() : a.kind === 'followup' ? I.user() : I.clock()}</span>
+          <span style={{ color: a.urgent ? 'var(--warn)' : 'var(--ink-2)' }}>{a.kind === 'med' ? I.pill() : a.kind === 'flow' ? I.shirt() : a.kind === 'followup' ? I.user() : a.kind === 'sleep' ? I.moon() : I.clock()}</span>
           <div class="grow">
             <div class="t">{a.title}</div>
             {a.body && <div class="d">{a.body}</div>}
@@ -179,6 +180,7 @@ function AlertsStrip(props: { alerts: Alert[]; nav: Nav }) {
             </div>
           )}
           {a.task && a.kind !== 'flow' && <button class="btn small" onClick={() => props.nav.task(a.task!)}>Open</button>}
+          {a.kind === 'sleep' && <button class="btn small" onClick={() => props.nav.hub('alarm')}>Review</button>}
         </div>
       ))}
     </Glass>
@@ -187,7 +189,8 @@ function AlertsStrip(props: { alerts: Alert[]; nav: Nav }) {
 
 function Timeline(props: { d: ReturnType<typeof useDay>; onOpen: (b: Block) => void }) {
   const { blocks, nowMin, checks, slots, s } = props.d;
-  const cutoff = parseHM(s.settings.coffeeCutoff, s.settings.rolloverHour);
+  const cutoffHM = caffeineCutoff(s.settings);
+  const cutoff = parseHM(cutoffHM, s.settings.rolloverHour);
   const [full, setFull] = useState(false);
   const visible = full ? blocks : blocks.filter((b) => b.end > nowMin - 30).slice(0, 7);
   let markerShown = false;
@@ -207,7 +210,7 @@ function Timeline(props: { d: ReturnType<typeof useDay>; onOpen: (b: Block) => v
           if (showMarker) markerShown = true;
           return (
             <Fragment key={b.id}>
-              {showMarker && <div class="marker">☕ {s.settings.coffeeCutoff} caffeine cut-off</div>}
+              {showMarker && <div class="marker">☕ {cutoffHM} caffeine cut-off</div>}
               <button class={`tl ${isNow ? 'now' : ''} ${past ? 'past' : ''}`} style={{ '--tone': blockTone(b) } as JSX.CSSProperties} onClick={() => props.onOpen(b)}>
                 <div class="row" style={{ alignItems: 'flex-start' }}>
                   <span class="time">{fmtHM(b.start)}</span>
@@ -272,6 +275,18 @@ export function CheckinSheet(props: { open: boolean; onClose: () => void }) {
   const [heart, setHeart] = useState<number>(cur.heartburn ?? 1);
   const [energy, setEnergy] = useState<number>(cur.energy ?? 3);
   const [sleepQ, setSleepQ] = useState<number>(d.dayLog.sleep?.quality ?? 3);
+  const [lat, setLat] = useState<number | undefined>(d.dayLog.sleep?.latency);
+  const [awk, setAwk] = useState<number | undefined>(d.dayLog.sleep?.awake);
+  const pick = (label: string, opts: [number, string][], v: number | undefined, set: (n: number) => void, id: string) => (
+    <div class="field">
+      <label>{label}</label>
+      <div class="chips" id={id} role="radiogroup" aria-label={label}>
+        {opts.map(([m, t]) => (
+          <button key={m} role="radio" aria-checked={v === m} class={`chip ${v === m ? 'on' : ''}`} onClick={() => set(m)}>{t}</button>
+        ))}
+      </div>
+    </div>
+  );
   const [steps, setSteps] = useState<string>(d.dayLog.steps ? String(d.dayLog.steps) : '');
   const scale = (label: string, v: number, set: (n: number) => void, max: number, lo: string, hi: string, id: string) => (
     <div class="field">
@@ -283,7 +298,9 @@ export function CheckinSheet(props: { open: boolean; onClose: () => void }) {
   return (
     <Sheet open={props.open} onClose={props.onClose} title="Daily check-in">
       <div class="stack">
-        <div class="sub">ให้คะแนนตามความรู้สึกทั้งวัน ใช้ดูแนวโน้มและนำไปคุยกับหมอได้</div>
+        <div class="sub">ให้คะแนนตามความรู้สึกทั้งวัน ใช้ดูแนวโน้มและนำไปคุยกับหมอได้ สองข้อแรกใช้ปรับเวลานอนให้อัตโนมัติ</div>
+        {pick('เมื่อคืนใช้เวลากว่าจะหลับ', [[10, '< 15 นาที'], [22, '15–30'], [45, '30–60'], [75, '> 1 ชม.']], lat, setLat, 'ci-lat')}
+        {pick('ตื่นกลางดึกรวม', [[0, 'แทบไม่ตื่น'], [10, '5–15 นาที'], [22, '15–30'], [45, '30–60'], [75, '> 1 ชม.']], awk, setAwk, 'ci-awake')}
         {scale('Belching', belch, setBelch, 10, '0 ไม่มี', '10 ทั้งวัน', 'ci-belch')}
         {scale('Heartburn / reflux', heart, setHeart, 10, '0 ไม่มี', '10 หนักมาก', 'ci-heart')}
         {scale('Energy', energy, setEnergy, 5, '1 หมดแรง', '5 สดชื่น', 'ci-energy')}
@@ -295,7 +312,7 @@ export function CheckinSheet(props: { open: boolean; onClose: () => void }) {
         <button
           class="btn primary block"
           onClick={(e) => {
-            patchDay(d.today, { symptoms: { belch, heartburn: heart, energy }, sleep: { quality: sleepQ }, steps: steps ? Number(steps) : undefined, checks: { checkin: Date.now() } });
+            patchDay(d.today, { symptoms: { belch, heartburn: heart, energy }, sleep: { quality: sleepQ, latency: lat, awake: awk }, steps: steps ? Number(steps) : undefined, checks: { checkin: Date.now() } });
             sound.done();
             burstFrom(e, '+5 XP');
             props.onClose();

@@ -4,6 +4,7 @@
 
 import { programForDay } from '../content/exercises';
 import { LOADS } from '../content/laundry';
+import { caffeineCutoff } from './sleepcoach';
 import { fmtHM, parseHM, weekday } from './time';
 import type { Area, DayLog, Med, Plan, Settings } from './types';
 
@@ -103,7 +104,7 @@ export function buildDay(key: string, st: Settings, plan: Plan | null, log?: Day
   });
   add({
     id: 'coffee', start: M1 + 30, end: M1 + 45, kind: 'break', area: 'health', title: 'Coffee · Belly breathing', sub: 'กาแฟ 1 แก้วหลังอาหาร + หายใจท้อง 15 นาที', action: 'breath',
-    items: [{ id: 'coffee', label: 'Coffee (1 cup)', hint: 'หลังอาหารเท่านั้น คาเฟอีนแก้วสุดท้ายก่อน ' + st.coffeeCutoff, kind: 'food' }, { id: 'breath-am', label: 'Breathing 15 min', kind: 'habit' }],
+    items: [{ id: 'coffee', label: 'Coffee (1 cup)', hint: 'หลังอาหารเท่านั้น คาเฟอีนแก้วสุดท้ายก่อน ' + caffeineCutoff(st) + ' (12 ชม. ก่อนปิดไฟ)', kind: 'food' }, { id: 'breath-am', label: 'Breathing 15 min', kind: 'habit' }],
   });
 
   let cursor = M1 + 45;

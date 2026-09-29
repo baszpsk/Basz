@@ -1,15 +1,17 @@
 // In-app notifications, derived from state: due flow steps, follow-ups,
-// overdue tasks, meds not taken, and new items Claude put into the digests.
+// overdue tasks, meds not taken, a sleep-window change the coach suggests,
+// and new items Claude put into the digests.
 
 import { isActionable } from './priority';
 import type { Block } from './schedule';
+import { sleepAdvice } from './sleepcoach';
 import type { State } from './store';
-import { dueToTs } from './time';
+import { dueToTs, monthOf } from './time';
 import type { DigestItem, Task } from './types';
 
 export interface Alert {
   id: string;
-  kind: 'flow' | 'followup' | 'overdue' | 'med' | 'digest';
+  kind: 'flow' | 'followup' | 'overdue' | 'med' | 'sleep' | 'digest';
   title: string;
   body?: string;
   task?: Task;
@@ -34,6 +36,15 @@ export function computeAlerts(s: State, now: Date, today: string, blocks: Block[
     for (const it of b.items || []) {
       if (it.kind === 'med' && !checks[it.id]) out.push({ id: 'med-' + today + it.id, kind: 'med', title: `Not ticked: ${it.label}`, body: it.hint || b.title, urgent: true });
     }
+  }
+  const sa = sleepAdvice((day) => s.logs[monthOf(day)]?.days?.[day], s.settings, today, s.meta.sleepWindowFrom);
+  if (sa.next) {
+    out.push({
+      id: `sleep-${today}-${sa.next}`,
+      kind: 'sleep',
+      title: sa.action === 'earlier' ? `Sleep longer: lights out ${sa.next}` : `Sleep deeper: lights out ${sa.next}`,
+      body: `จากเช็คอิน ${sa.nights} คืนล่าสุด · แตะ Review เพื่อดูเหตุผลและยืนยัน`,
+    });
   }
   const seen = s.meta.seen || {};
   const digests = Object.values(s.digests).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 7);

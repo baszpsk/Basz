@@ -53,6 +53,9 @@ export function copyForError(e: unknown): string {
   }
 }
 
+/** The owner asked for the most capable model on every call, even when it is slower. */
+const TIER = 'complex';
+
 export async function parseTask(text: string, nowIso: string, weekdayName: string, answers?: Record<string, string>, signal?: AbortSignal): Promise<ParsedTask> {
   const sample = await sampleCap();
   if (!sample) throw { code: 'capability_disabled' };
@@ -74,7 +77,7 @@ Reply with only JSON:
  "followUpDays": days until he should chase that person, else null,
  "subtasks": up to 5 short steps if the task is big, else [],
  "questions": up to 2 questions in Thai, ONLY when a missing detail would change priority or deadline; each {"id": short id, "q": question, "options": 2-4 short answers}. Otherwise [].}`;
-  return sample.json<ParsedTask>(prompt, { modelTier: 'quick', cache: false, signal });
+  return sample.json<ParsedTask>(prompt, { modelTier: TIER, cache: false, signal });
 }
 
 export interface PlanAdvice { order: string[]; notes: Record<string, string>; questions: Question[]; summary: string }
@@ -95,7 +98,7 @@ Reply with only JSON:
  "notes": {task id: one short Thai sentence why},
  "summary": one or two Thai sentences: the plan for today,
  "questions": up to 2 Thai questions if a missing detail changes the order, each {"id","q","options":[2-4]}, else []}`;
-  return sample.json<PlanAdvice>(prompt, { modelTier: 'default', cache: false, signal });
+  return sample.json<PlanAdvice>(prompt, { modelTier: TIER, cache: false, signal });
 }
 
 export interface Breakdown { steps: { title: string; estimateMin: number; impact: 1 | 2 | 3 }[]; firstStep: string; questions: Question[] }
@@ -107,7 +110,7 @@ export async function breakDown(idea: string, signal?: AbortSignal): Promise<Bre
 He wrote this idea or goal: """${idea.slice(0, 3000)}"""
 Break it into 3-7 concrete next steps he can do himself or delegate (Thai titles, each starts with a verb). Prefer cheap tests before big spending.
 Reply with only JSON: {"steps":[{"title","estimateMin","impact":1|2|3}], "firstStep": the one step to do first (Thai), "questions": up to 2 Thai questions if something important is unclear, each {"id","q","options":[2-4]}, else []}`;
-  return sample.json<Breakdown>(prompt, { modelTier: 'default', cache: false, signal });
+  return sample.json<Breakdown>(prompt, { modelTier: TIER, cache: false, signal });
 }
 
 export async function coach(question: string, facts: string, onText: (t: string) => void, signal?: AbortSignal): Promise<string> {
@@ -119,6 +122,6 @@ ${facts.slice(0, 12000)}
 
 He asks: """${question.slice(0, 2000)}"""
 Answer in Thai, short and practical. Use facts, say plainly when evidence is weak, never flatter, and tell him to ask his doctor for anything about his medicines.`;
-  const r = await sample(prompt, { cache: false, signal, onText: ({ text }: { text: string }) => onText(text) });
+  const r = await sample(prompt, { modelTier: TIER, cache: false, signal, onText: ({ text }: { text: string }) => onText(text) });
   return r.text;
 }

@@ -14,7 +14,7 @@ export const DEFAULT_SETTINGS: Settings = {
   workoutDays: [1, 3, 5],
   rolloverHour: 6,
   focus: { work: 25, short: 5, long: 15, every: 4, autoBreak: true },
-  coffeeCutoff: '16:00',
+  coffeeCutoff: '13:00',
   dryHours: 8,
   proteinTarget: 110,
   breathTargetMin: 30,
@@ -31,6 +31,8 @@ export interface Meta {
   challenge?: { week: string; accepted?: boolean };
   flowDurations?: Record<string, number>;
   onboarded?: boolean;
+  /** Logical day the sleep window last moved; the coach only reads nights after it. */
+  sleepWindowFrom?: string;
 }
 
 export interface State {

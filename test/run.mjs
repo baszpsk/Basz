@@ -89,6 +89,15 @@ await page.click('button:has-text("Add task")');
 await page.waitForTimeout(300);
 await check(page.evaluate(() => [...window.__docs.keys()].some((k) => k.startsWith('tasks/') && window.__docs.get(k).title.includes('ซัพพลายเออร์กิมจิ'))), 'new task saved to db');
 
+// morning check-in records how long it took to fall asleep and time awake
+await page.click('.screen .chip:has-text("Check-in")');
+await page.waitForSelector('#ci-lat');
+await page.click('#ci-lat .chip:has-text("< 15")');
+await page.click('#ci-awake .chip:has-text("แทบไม่ตื่น")');
+await page.click('button:has-text("Save check-in")');
+await page.waitForTimeout(300);
+await check(page.evaluate(() => [...window.__docs.entries()].some(([k, v]) => k.startsWith('logs/') && Object.values(v.days || {}).some((d) => d.sleep?.latency === 10 && d.sleep?.awake === 0))), 'check-in saves sleep latency and awake time');
+
 // Tasks tab
 await page.click('.tab:has-text("Tasks")');
 await page.waitForTimeout(300);
