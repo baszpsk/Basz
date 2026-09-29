@@ -210,14 +210,14 @@ export function LineChart(props: { series: Series[]; max: number; title: string;
             {s.name}
           </span>
         ))}
-        <button class="chip" style={{ marginLeft: 'auto' }} onClick={() => setTable(!table)}>{table ? 'Chart' : 'Table'}</button>
+        <button class="chip" style={{ marginLeft: 'auto' }} onClick={() => setTable(!table)}>{table ? 'กราฟ' : 'ตาราง'}</button>
       </div>
       {table ? (
         <div style={{ overflowX: 'auto' }}>
           <table class="tiny num" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={{ textAlign: 'left' }}>Day</th>
+                <th style={{ textAlign: 'left' }}>วันที่</th>
                 {props.series.map((s) => <th key={s.name} style={{ textAlign: 'right' }}>{s.name}</th>)}
               </tr>
             </thead>

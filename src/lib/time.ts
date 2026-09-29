@@ -38,10 +38,10 @@ export function fmtHM(min: number): string {
 
 export function fmtDuration(min: number): string {
   const m = Math.max(0, Math.round(min));
-  if (m < 60) return `${m} min`;
+  if (m < 60) return `${m} นาที`;
   const h = Math.floor(m / 60);
   const r = m % 60;
-  return r ? `${h} h ${r} min` : `${h} h`;
+  return r ? `${h} ชม. ${r} นาที` : `${h} ชม.`;
 }
 
 export function fmtClock(sec: number): string {
@@ -82,13 +82,14 @@ export function tsAtMinutes(key: string, mins: number): number {
   return d.getTime() + mins * 60000;
 }
 
-const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MO = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WD = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+const WD_LONG = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+const MO = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 export const wdName = (i: number) => WD[i];
 
 export function fmtDayLong(key: string): string {
   const d = keyToDate(key);
-  return `${WD[d.getDay()]} ${d.getDate()} ${MO[d.getMonth()]}`;
+  return `วัน${WD_LONG[d.getDay()]}ที่ ${d.getDate()} ${MO[d.getMonth()]}`;
 }
 
 export function fmtShortDate(key: string): string {
@@ -99,9 +100,9 @@ export function fmtShortDate(key: string): string {
 export function relTime(ts: number, now: number): string {
   const diff = Math.round((ts - now) / 60000);
   const abs = Math.abs(diff);
-  const txt = abs < 1 ? 'now' : abs < 60 ? `${abs} min` : abs < 1440 ? `${Math.round(abs / 60)} h` : `${Math.round(abs / 1440)} d`;
-  if (txt === 'now') return 'now';
-  return diff > 0 ? `in ${txt}` : `${txt} ago`;
+  const txt = abs < 1 ? 'ตอนนี้' : abs < 60 ? `${abs} นาที` : abs < 1440 ? `${Math.round(abs / 60)} ชม.` : `${Math.round(abs / 1440)} วัน`;
+  if (txt === 'ตอนนี้') return txt;
+  return diff > 0 ? `อีก ${txt}` : `${txt}ที่แล้ว`;
 }
 
 export function dueToTs(due: string, rolloverHour = 6): number {

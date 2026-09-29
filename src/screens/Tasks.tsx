@@ -12,11 +12,11 @@ import { dateKey, fmtShortDate, pad, relTime, todayKey, uid, wdName } from '../l
 import type { Area, Task } from '../lib/types';
 
 const AREAS = Object.keys(AREA_LABEL) as Area[];
-const IMPACT_LABEL = { 1: 'Low', 2: 'Medium', 3: 'High' } as const;
+const IMPACT_LABEL = { 1: 'ต่ำ', 2: 'ปานกลาง', 3: 'สูง' } as const;
 
 export function AreaChips(props: { value: Area; onChange: (a: Area) => void }) {
   return (
-    <div class="chips" role="radiogroup" aria-label="Area">
+    <div class="chips" role="radiogroup" aria-label="หมวด">
       {AREAS.map((a) => (
         <button key={a} role="radio" aria-checked={props.value === a} class={`chip ${props.value === a ? 'on' : ''}`} onClick={() => props.onChange(a)} style={{ '--tone': toneOf(a) } as JSX.CSSProperties}>
           <span class="sw" />
@@ -52,7 +52,7 @@ export function TaskComposer(props: { onSubmit: (text: string, mode: 'task' | 'i
           rows={1}
           value={text}
           placeholder={props.placeholder || (mode === 'task' ? 'พิมพ์งานหรือเรื่องที่ต้องทำ…' : 'พิมพ์ไอเดียพัฒนาร้าน…')}
-          aria-label="New task"
+          aria-label="งานใหม่"
           onInput={(e) => setText((e.target as HTMLTextAreaElement).value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey && !(e as KeyboardEvent).isComposing) {
@@ -61,13 +61,13 @@ export function TaskComposer(props: { onSubmit: (text: string, mode: 'task' | 'i
             }
           }}
         />
-        <button class="icon-btn" style={{ background: 'var(--accent)', color: 'var(--accent-ink)' }} aria-label="Add" onClick={submit}>
+        <button class="icon-btn" style={{ background: 'var(--accent)', color: 'var(--accent-ink)' }} aria-label="เพิ่ม" onClick={submit}>
           {I.plus({ size: 20 })}
         </button>
       </div>
       <div class="row" style={{ gap: '6px', paddingLeft: '6px' }}>
-        <button class={`chip ${mode === 'task' ? 'on' : ''}`} onClick={() => setMode('task')}>Task</button>
-        <button class={`chip ${mode === 'idea' ? 'on' : ''}`} onClick={() => setMode('idea')}>Idea → steps</button>
+        <button class={`chip ${mode === 'task' ? 'on' : ''}`} onClick={() => setMode('task')}>งาน</button>
+        <button class={`chip ${mode === 'idea' ? 'on' : ''}`} onClick={() => setMode('idea')}>ไอเดีย → ขั้นตอน</button>
       </div>
     </div>
   );
@@ -128,7 +128,7 @@ function draftToTask(d: Draft, base?: Task): Task {
   const due = d.dueDate ? (d.dueTime ? `${d.dueDate}T${d.dueTime}` : d.dueDate) : undefined;
   const t: Task = {
     ...(base || newTask({ source: 'ai' })),
-    title: d.title.trim() || 'Untitled',
+    title: d.title.trim() || 'งานไม่มีชื่อ',
     area: d.area,
     impact: d.impact,
     due,
@@ -151,33 +151,33 @@ function DraftForm(props: { d: Draft; set: (d: Draft) => void; showWaiting: bool
   return (
     <div class="stack">
       <div class="field">
-        <label for="t-title">Title</label>
+        <label for="t-title">ชื่องาน</label>
         <input id="t-title" class="input" value={d.title} onInput={(e) => set({ ...d, title: (e.target as HTMLInputElement).value })} />
       </div>
       <div class="field">
-        <label>Area</label>
+        <label>หมวด</label>
         <AreaChips value={d.area} onChange={(area) => set({ ...d, area })} />
       </div>
       <div class="field">
-        <label>Impact</label>
-        <Seg id="t-impact" options={[{ id: '1', label: 'Low' }, { id: '2', label: 'Medium' }, { id: '3', label: 'High' }]} value={String(d.impact) as '1' | '2' | '3'} onChange={(v) => set({ ...d, impact: Number(v) as 1 | 2 | 3 })} />
+        <label>ความสำคัญ</label>
+        <Seg id="t-impact" options={[{ id: '1', label: 'ต่ำ' }, { id: '2', label: 'ปานกลาง' }, { id: '3', label: 'สูง' }]} value={String(d.impact) as '1' | '2' | '3'} onChange={(v) => set({ ...d, impact: Number(v) as 1 | 2 | 3 })} />
       </div>
       <div class="row" style={{ gap: '10px' }}>
         <div class="field grow">
-          <label for="t-date">Due date</label>
+          <label for="t-date">กำหนดส่ง</label>
           <input id="t-date" type="date" class="input" value={d.dueDate} onInput={(e) => set({ ...d, dueDate: (e.target as HTMLInputElement).value })} />
         </div>
         <div class="field" style={{ width: '120px' }}>
-          <label for="t-time">Time</label>
+          <label for="t-time">เวลา</label>
           <input id="t-time" type="time" class="input" value={d.dueTime} onInput={(e) => set({ ...d, dueTime: (e.target as HTMLInputElement).value })} />
         </div>
       </div>
       <div class="field">
-        <label>Time needed</label>
+        <label>ใช้เวลา</label>
         <div class="chips">
           {[10, 25, 50, 90, 120].map((m) => (
             <button key={m} class={`chip ${d.estimateMin === m ? 'on' : ''}`} onClick={() => set({ ...d, estimateMin: m })}>
-              {m < 60 ? `${m} min` : `${m / 60} h`}
+              {m < 60 ? `${m} นาที` : `${m / 60} ชม.`}
             </button>
           ))}
         </div>
@@ -185,45 +185,45 @@ function DraftForm(props: { d: Draft; set: (d: Draft) => void; showWaiting: bool
       {props.showWaiting && (
         <div class="row" style={{ gap: '10px' }}>
           <div class="field grow">
-            <label for="t-wait">Waiting on (optional)</label>
+            <label for="t-wait">รอใคร (ถ้ามี)</label>
             <input id="t-wait" class="input" placeholder="เช่น ชื่อพนักงาน/ซัพพลายเออร์" value={d.waitingOn} onInput={(e) => set({ ...d, waitingOn: (e.target as HTMLInputElement).value })} />
           </div>
           {d.waitingOn && (
             <div class="field" style={{ width: '110px' }}>
-              <label for="t-fu">Chase in</label>
+              <label for="t-fu">ตามงานอีก</label>
               <select id="t-fu" class="select" value={String(d.followUpDays)} onChange={(e) => set({ ...d, followUpDays: Number((e.target as HTMLSelectElement).value) })}>
-                {[1, 2, 3, 5, 7].map((n) => <option key={n} value={n}>{n} d</option>)}
+                {[1, 2, 3, 5, 7].map((n) => <option key={n} value={n}>{n} วัน</option>)}
               </select>
             </div>
           )}
         </div>
       )}
       <div class="field">
-        <label for="t-repeat">Repeat</label>
+        <label for="t-repeat">ทำซ้ำ</label>
         <select id="t-repeat" class="select" value={String(d.repeatDays)} onChange={(e) => set({ ...d, repeatDays: Number((e.target as HTMLSelectElement).value) })}>
-          <option value="0">Does not repeat</option>
-          <option value="1">Every day</option>
-          <option value="7">Every week</option>
-          <option value="14">Every 2 weeks</option>
-          <option value="30">Every month</option>
+          <option value="0">ไม่ทำซ้ำ</option>
+          <option value="1">ทุกวัน</option>
+          <option value="7">ทุกสัปดาห์</option>
+          <option value="14">ทุก 2 สัปดาห์</option>
+          <option value="30">ทุกเดือน</option>
         </select>
       </div>
       {!!d.subtasks.length && (
         <div class="field">
-          <label>Steps</label>
+          <label>ขั้นย่อย</label>
           <div class="card list">
             {d.subtasks.map((st, i) => (
               <div key={i} class="item">
                 <span class="tiny num">{i + 1}</span>
-                <input class="input" style={{ padding: '8px 10px' }} value={st} aria-label={`Step ${i + 1}`} onInput={(e) => set({ ...d, subtasks: d.subtasks.map((x, j) => (j === i ? (e.target as HTMLInputElement).value : x)) })} />
-                <button class="icon-btn" aria-label="Remove step" onClick={() => set({ ...d, subtasks: d.subtasks.filter((_, j) => j !== i) })}>{I.close({ size: 16 })}</button>
+                <input class="input" style={{ padding: '8px 10px' }} value={st} aria-label={`ขั้นที่ ${i + 1}`} onInput={(e) => set({ ...d, subtasks: d.subtasks.map((x, j) => (j === i ? (e.target as HTMLInputElement).value : x)) })} />
+                <button class="icon-btn" aria-label="ลบขั้นย่อย" onClick={() => set({ ...d, subtasks: d.subtasks.filter((_, j) => j !== i) })}>{I.close({ size: 16 })}</button>
               </div>
             ))}
           </div>
         </div>
       )}
       <div class="field">
-        <label for="t-notes">Notes</label>
+        <label for="t-notes">บันทึก</label>
         <textarea id="t-notes" class="textarea" value={d.notes} onInput={(e) => set({ ...d, notes: (e.target as HTMLTextAreaElement).value })} />
       </div>
     </div>
@@ -256,7 +256,7 @@ export function AddSheet(props: { open: boolean; text: string; mode: 'task' | 'i
     const sample = await sampleCap();
     if (!sample) {
       setDraft(draftFromParsed({ title: props.text, area: 'seoulful', impact: 2 }, props.text));
-      setNote('Claude is not available in this view. Fill in the details yourself.');
+      setNote('ใช้ Claude ในหน้านี้ไม่ได้ กรอกรายละเอียดเองได้เลย');
       setPhase('ready');
       return;
     }
@@ -302,27 +302,27 @@ export function AddSheet(props: { open: boolean; text: string; mode: 'task' | 'i
     if (props.mode === 'idea') {
       const chosen = steps.filter((x) => x.on);
       chosen.forEach((x, i) => saveTask(newTask({ title: x.title, area: 'seoulful', impact: x.impact || 2, estimateMin: x.estimateMin || 25, createdAt: Date.now() + i, notes: `จากไอเดีย: ${props.text.slice(0, 200)}`, source: 'ai' })));
-      toast(`Added ${chosen.length} steps`);
+      toast(`เพิ่ม ${chosen.length} งานแล้ว`);
     } else if (draft) {
       const t = draftToTask(draft);
       saveTask(t);
       const ranked = rankTasks(Object.values({ ...s.tasks, [t.id]: t }), Date.now(), todayKey(new Date(), s.settings.rolloverHour), s.settings.rolloverHour);
       const pos = ranked.findIndex((r) => r.task.id === t.id);
-      toast(t.status === 'waiting' ? `Waiting on ${t.waitingOn} · reminder set` : pos >= 0 ? `Added · #${pos + 1} on your list` : 'Added');
+      toast(t.status === 'waiting' ? `รอ ${t.waitingOn} · ตั้งเตือนแล้ว` : pos >= 0 ? `เพิ่มแล้ว · อยู่ลำดับที่ ${pos + 1}` : 'เพิ่มแล้ว');
     }
     sound.done();
     props.onClose();
   };
 
   return (
-    <Sheet open={props.open} onClose={props.onClose} title={props.mode === 'idea' ? 'Idea → steps' : 'New task'}>
+    <Sheet open={props.open} onClose={props.onClose} title={props.mode === 'idea' ? 'ไอเดีย → ขั้นตอน' : 'งานใหม่'}>
       <div class="stack">
         <div class="card pad sub" style={{ whiteSpace: 'pre-wrap' }}>{props.text}</div>
         {phase === 'thinking' && (
           <div class="row">
             <div class="skeleton" style={{ width: '22px', height: '22px', borderRadius: '50%' }} />
-            <span class="sub grow">Claude is sorting this…</span>
-            <button class="btn small ghost" onClick={() => ctl.current?.abort()}>Stop</button>
+            <span class="sub grow">Claude กำลังคิดให้…</span>
+            <button class="btn small ghost" onClick={() => ctl.current?.abort()}>หยุด</button>
           </div>
         )}
         {note && <div class="banner">{note}</div>}
@@ -330,14 +330,14 @@ export function AddSheet(props: { open: boolean; text: string; mode: 'task' | 'i
         {props.mode === 'idea' ? (
           steps.length > 0 && (
             <div class="stack">
-              {first && <div class="card pad"><div class="eyebrow">Do first</div><div class="h3">{first}</div></div>}
+              {first && <div class="card pad"><div class="eyebrow">ทำอันนี้ก่อน</div><div class="h3">{first}</div></div>}
               <div class="card list">
                 {steps.map((x, i) => (
                   <div key={i} class="item">
                     <Check on={x.on} label={x.title} onToggle={() => setSteps(steps.map((y, j) => (j === i ? { ...y, on: !y.on } : y)))} tone="var(--accent)" />
                     <div class="grow">
                       <div class="t">{x.title}</div>
-                      <div class="d">{x.estimateMin} min · {IMPACT_LABEL[x.impact] || 'Medium'} impact</div>
+                      <div class="d">{x.estimateMin} นาที · ความสำคัญ{IMPACT_LABEL[x.impact] || 'ปานกลาง'}</div>
                     </div>
                   </div>
                 ))}
@@ -348,7 +348,7 @@ export function AddSheet(props: { open: boolean; text: string; mode: 'task' | 'i
           draft && <DraftForm d={draft} set={setDraft} showWaiting />
         )}
         <button class="btn primary block" disabled={phase === 'thinking' || (props.mode === 'task' ? !draft : !steps.some((x) => x.on))} onClick={save}>
-          {props.mode === 'idea' ? 'Add steps as tasks' : 'Add task'}
+          {props.mode === 'idea' ? 'เพิ่มขั้นตอนเป็นงาน' : 'เพิ่มงาน'}
         </button>
       </div>
     </Sheet>
@@ -377,7 +377,7 @@ export function TaskSheet(props: { task: Task | null; onClose: () => void; nav: 
   if (!t || !live || !d) return <Sheet open={false} onClose={props.onClose} />;
   const commit = () => {
     saveTask(draftToTask(d, live));
-    toast('Saved');
+    toast('บันทึกแล้ว');
     props.onClose();
   };
   const toggleStep = (id: string) => saveTask({ ...live, subtasks: (live.subtasks || []).map((x) => (x.id === id ? { ...x, done: !x.done } : x)) });
@@ -387,43 +387,43 @@ export function TaskSheet(props: { task: Task | null; onClose: () => void; nav: 
     setNewStep('');
   };
   return (
-    <Sheet open={!!t} onClose={props.onClose} title={live.status === 'done' ? 'Done' : live.status === 'waiting' ? 'Waiting' : 'Task'}>
+    <Sheet open={!!t} onClose={props.onClose} title={live.status === 'done' ? 'เสร็จแล้ว' : live.status === 'waiting' ? 'รอคนอื่น' : 'งาน'}>
       <div class="stack">
         <div class="row wrap" style={{ gap: '8px' }}>
           {live.status !== 'done' && (
             <button class="btn primary" onClick={(e) => { completeTask(live); sound.done(); burstFrom(e, ''); props.onClose(); }}>
-              {I.check({ size: 18 })} Done
+              {I.check({ size: 18 })} เสร็จ
             </button>
           )}
-          {live.status === 'done' && <button class="btn" onClick={() => { reopenTask(live); props.onClose(); }}>Reopen</button>}
+          {live.status === 'done' && <button class="btn" onClick={() => { reopenTask(live); props.onClose(); }}>ยังไม่เสร็จ</button>}
           {live.flow && live.status === 'todo' && (
-            <button class="btn" onClick={() => { snooze(live, 30); toast('Snoozed 30 min'); props.onClose(); }}>Snooze 30 min</button>
+            <button class="btn" onClick={() => { snooze(live, 30); toast('เลื่อนไป 30 นาทีแล้ว'); props.onClose(); }}>เลื่อน 30 นาที</button>
           )}
-          <button class="btn" aria-pressed={!!live.pinned} onClick={() => saveTask({ ...live, pinned: !live.pinned })}>{live.pinned ? 'Unpin' : 'Pin to top'}</button>
+          <button class="btn" aria-pressed={!!live.pinned} onClick={() => saveTask({ ...live, pinned: !live.pinned })}>{live.pinned ? 'เลิกปักหมุด' : 'ปักหมุดไว้บนสุด'}</button>
         </div>
 
         {live.status === 'waiting' ? (
           <div class="card pad stack-sm">
-            <div class="h3">Waiting on {live.waitingOn}</div>
+            <div class="h3">รอ {live.waitingOn}</div>
             <div class="sub">
-              {live.followUpAt ? `Next follow-up ${relTime(live.followUpAt, Date.now())}` : ''} · followed up {live.followUps || 0}×
+              {live.followUpAt ? `ตามงานครั้งถัดไป ${relTime(live.followUpAt, Date.now())}` : ''} · ตามไปแล้ว {live.followUps || 0} ครั้ง
             </div>
             <div class="row wrap" style={{ gap: '8px' }}>
-              <button class="btn small" onClick={() => { followedUp(live, 2); toast('Next reminder in 2 days'); }}>Chased · remind in 2 d</button>
-              <button class="btn small" onClick={() => { backFromWaiting(live); toast('Back on your list'); }}>They delivered</button>
+              <button class="btn small" onClick={() => { followedUp(live, 2); toast('จะเตือนอีกครั้งใน 2 วัน'); }}>ตามแล้ว · เตือนอีก 2 วัน</button>
+              <button class="btn small" onClick={() => { backFromWaiting(live); toast('กลับเข้ารายการแล้ว'); }}>เขาส่งงานแล้ว</button>
             </div>
           </div>
         ) : (
           live.status === 'todo' && !live.flow && (
             <div class="card pad stack-sm">
-              <div class="h3">Hand it off</div>
+              <div class="h3">ให้คนอื่นทำ</div>
               <div class="row" style={{ gap: '8px' }}>
                 <input class="input grow" id="t-delegate" placeholder="ให้ใครทำ" value={person} onInput={(e) => setPerson((e.target as HTMLInputElement).value)} />
-                <select class="select" style={{ width: '92px' }} aria-label="Follow up in" value={String(days)} onChange={(e) => setDays(Number((e.target as HTMLSelectElement).value))}>
-                  {[1, 2, 3, 5, 7].map((n) => <option key={n} value={n}>{n} d</option>)}
+                <select class="select" style={{ width: '92px' }} aria-label="ตามงานอีก" value={String(days)} onChange={(e) => setDays(Number((e.target as HTMLSelectElement).value))}>
+                  {[1, 2, 3, 5, 7].map((n) => <option key={n} value={n}>{n} วัน</option>)}
                 </select>
               </div>
-              <button class="btn small" disabled={!person.trim()} onClick={() => { delegate(live, person.trim(), days); toast(`Waiting on ${person.trim()} · I'll remind you`); props.onClose(); }}>Delegate & follow up</button>
+              <button class="btn small" disabled={!person.trim()} onClick={() => { delegate(live, person.trim(), days); toast(`รอ ${person.trim()} · จะเตือนให้ตามงาน`); props.onClose(); }}>มอบงานและตามงาน</button>
             </div>
           )
         )}
@@ -439,20 +439,20 @@ export function TaskSheet(props: { task: Task | null; onClose: () => void; nav: 
           </div>
         )}
         <div class="row" style={{ gap: '8px' }}>
-          <input class="input grow" id="t-newstep" placeholder="Add a step" value={newStep} onInput={(e) => setNewStep((e.target as HTMLInputElement).value)} onKeyDown={(e) => e.key === 'Enter' && addStep()} />
-          <button class="icon-btn" aria-label="Add step" onClick={addStep}>{I.plus({ size: 18 })}</button>
+          <input class="input grow" id="t-newstep" placeholder="เพิ่มขั้นย่อย" value={newStep} onInput={(e) => setNewStep((e.target as HTMLInputElement).value)} onKeyDown={(e) => e.key === 'Enter' && addStep()} />
+          <button class="icon-btn" aria-label="เพิ่มขั้นย่อย" onClick={addStep}>{I.plus({ size: 18 })}</button>
         </div>
 
         <DraftForm d={d} set={setD} showWaiting={false} />
-        <button class="btn primary block" onClick={commit}>Save changes</button>
+        <button class="btn primary block" onClick={commit}>บันทึก</button>
         {confirmDel ? (
           <div class="row">
-            <span class="sub grow">Delete this task for good?</span>
-            <button class="btn small ghost" onClick={() => setConfirmDel(false)}>Keep</button>
-            <button class="btn small" style={{ background: 'var(--bad)', color: '#fff' }} onClick={() => { deleteTask(live.id); toast('Deleted'); props.onClose(); }}>Delete</button>
+            <span class="sub grow">ลบงานนี้ถาวรใช่ไหม?</span>
+            <button class="btn small ghost" onClick={() => setConfirmDel(false)}>เก็บไว้</button>
+            <button class="btn small" style={{ background: 'var(--bad)', color: '#fff' }} onClick={() => { deleteTask(live.id); toast('ลบแล้ว'); props.onClose(); }}>ลบ</button>
           </div>
         ) : (
-          <button class="btn ghost block" onClick={() => setConfirmDel(true)}>{I.trash({ size: 18 })} Delete</button>
+          <button class="btn ghost block" onClick={() => setConfirmDel(true)}>{I.trash({ size: 18 })} ลบ</button>
         )}
       </div>
     </Sheet>
@@ -467,7 +467,7 @@ export function TaskRow(props: { task: Task; reasons?: string[]; onOpen: () => v
       <Check
         on={done}
         tone={toneOf(t.area)}
-        label={`Complete ${t.title}`}
+        label={`ทำเสร็จ: ${t.title}`}
         onToggle={(e) => {
           if (done) reopenTask(t);
           else {
@@ -484,9 +484,9 @@ export function TaskRow(props: { task: Task; reasons?: string[]; onOpen: () => v
             <span class="area-dot" style={{ '--tone': toneOf(t.area) } as JSX.CSSProperties} />
             {AREA_LABEL[t.area]}
           </span>
-          {props.reasons?.slice(0, 2).map((r) => <Pill key={r} tone={r.startsWith('Overdue') ? 'var(--bad)' : r === 'Due today' ? 'var(--warn)' : undefined}>{r}</Pill>)}
-          {props.showDue && t.due && <span class="d">· due {fmtShortDate(t.due.slice(0, 10))}{t.due.includes('T') ? ' ' + t.due.slice(11, 16) : ''}</span>}
-          {t.status === 'waiting' && t.followUpAt && <span class="d">· chase {relTime(t.followUpAt, Date.now())}</span>}
+          {props.reasons?.slice(0, 2).map((r) => <Pill key={r} tone={r.startsWith('เลยกำหนด') ? 'var(--bad)' : r === 'กำหนดส่งวันนี้' ? 'var(--warn)' : undefined}>{r}</Pill>)}
+          {props.showDue && t.due && <span class="d">· กำหนดส่ง {fmtShortDate(t.due.slice(0, 10))}{t.due.includes('T') ? ' ' + t.due.slice(11, 16) : ''}</span>}
+          {t.status === 'waiting' && t.followUpAt && <span class="d">· ตามงาน {relTime(t.followUpAt, Date.now())}</span>}
           {!!t.subtasks?.length && <span class="d">· {t.subtasks.filter((x) => x.done).length}/{t.subtasks.length}</span>}
         </div>
       </div>
@@ -514,15 +514,15 @@ export function TasksScreen(props: { nav: Nav }) {
     <div class="screen">
       <div class="topbar">
         <div class="grow">
-          <div class="eyebrow">{open.length} open · {waiting.length} waiting</div>
-          <h1 class="h1">Tasks</h1>
+          <div class="eyebrow">งานค้าง {open.length} · รอคนอื่น {waiting.length}</div>
+          <h1 class="h1">งาน</h1>
         </div>
       </div>
       <TaskComposer id="tasks-composer" onSubmit={(text, mode) => props.nav.add(text, mode)} />
-      <Seg id="tasks-view" options={[{ id: 'today', label: 'Today' }, { id: 'all', label: 'All' }, { id: 'waiting', label: 'Waiting' }, { id: 'done', label: 'Done' }]} value={view} onChange={setView} />
+      <Seg id="tasks-view" options={[{ id: 'today', label: 'วันนี้' }, { id: 'all', label: 'ทั้งหมด' }, { id: 'waiting', label: 'รอคนอื่น' }, { id: 'done', label: 'เสร็จแล้ว' }]} value={view} onChange={setView} />
       {view === 'all' && (
         <div class="chips">
-          <button class={`chip ${area === 'all' ? 'on' : ''}`} onClick={() => setArea('all')}>All</button>
+          <button class={`chip ${area === 'all' ? 'on' : ''}`} onClick={() => setArea('all')}>ทั้งหมด</button>
           {AREAS.map((a) => (
             <button key={a} class={`chip ${area === a ? 'on' : ''}`} style={{ '--tone': toneOf(a) } as JSX.CSSProperties} onClick={() => setArea(a)}>
               <span class="sw" />{AREA_LABEL[a]}
@@ -532,17 +532,17 @@ export function TasksScreen(props: { nav: Nav }) {
       )}
       <Glass class="list">
         {view === 'today' &&
-          (ranked.length ? ranked.map((r) => <TaskRow key={r.task.id} task={r.task} reasons={r.reasons} onOpen={() => props.nav.task(r.task)} />) : <Empty title="Nothing on your list" body="พิมพ์งานในช่องด้านบน ระบบจะจัดลำดับและถามรายละเอียดที่ขาดให้" />)}
+          (ranked.length ? ranked.map((r) => <TaskRow key={r.task.id} task={r.task} reasons={r.reasons} onOpen={() => props.nav.task(r.task)} />) : <Empty title="ยังไม่มีงาน" body="พิมพ์งานในช่องด้านบน ระบบจะจัดลำดับและถามรายละเอียดที่ขาดให้" />)}
         {view === 'all' &&
-          (byArea(open).length ? byArea(open).sort((a, b) => b.impact - a.impact || a.createdAt - b.createdAt).map((t) => <TaskRow key={t.id} task={t} showDue onOpen={() => props.nav.task(t)} />) : <Empty title="No open tasks here" />)}
+          (byArea(open).length ? byArea(open).sort((a, b) => b.impact - a.impact || a.createdAt - b.createdAt).map((t) => <TaskRow key={t.id} task={t} showDue onOpen={() => props.nav.task(t)} />) : <Empty title="ไม่มีงานค้าง" />)}
         {view === 'waiting' &&
-          (waiting.length ? waiting.map((t) => <TaskRow key={t.id} task={t} onOpen={() => props.nav.task(t)} />) : <Empty title="Nobody owes you anything" body="งานที่มอบให้คนอื่นจะอยู่ที่นี่ และระบบจะเตือนให้ตามจนเสร็จ" />)}
+          (waiting.length ? waiting.map((t) => <TaskRow key={t.id} task={t} onOpen={() => props.nav.task(t)} />) : <Empty title="ไม่มีงานที่รอคนอื่น" body="งานที่มอบให้คนอื่นจะอยู่ที่นี่ และระบบจะเตือนให้ตามจนเสร็จ" />)}
         {view === 'done' &&
-          (done.length ? done.map((t) => <TaskRow key={t.id} task={t} onOpen={() => props.nav.task(t)} />) : <Empty title="No finished tasks yet" />)}
+          (done.length ? done.map((t) => <TaskRow key={t.id} task={t} onOpen={() => props.nav.task(t)} />) : <Empty title="ยังไม่มีงานที่เสร็จ" />)}
       </Glass>
       {view === 'today' && upcoming.length > 0 && (
         <>
-          <div class="section-head"><h2 class="h2">Scheduled</h2><span class="tiny">starts later</span></div>
+          <div class="section-head"><h2 class="h2">ตั้งเวลาไว้</h2><span class="tiny">เริ่มทีหลัง</span></div>
           <Glass class="list">
             {upcoming.sort((a, b) => (a.notBefore || 0) - (b.notBefore || 0)).map((t) => (
               <div key={t.id} class="item" role="button" tabIndex={0} onClick={() => props.nav.task(t)}>

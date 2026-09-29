@@ -106,7 +106,7 @@ export function WorkoutSheet(props: { programId: string | null; onClose: () => v
     const next = { ...log, [ex.id]: sets };
     setLog(next);
     sound.tick();
-    burstFrom(e, `Set ${si + 1} ✓`, 'var(--a-health)');
+    burstFrom(e, `เซ็ต ${si + 1} ✓`, 'var(--a-health)');
     if (si + 1 < item.sets) {
       setSi(si + 1);
       setRestEnd(Date.now() + item.rest * 1000);
@@ -127,8 +127,8 @@ export function WorkoutSheet(props: { programId: string | null; onClose: () => v
       saveMeta({ levels });
     }
     sound.done();
-    burstFrom(e, 'Saved', 'var(--a-health)');
-    toast('Workout saved');
+    burstFrom(e, 'บันทึกแล้ว', 'var(--a-health)');
+    toast('บันทึกการออกกำลังกายแล้ว');
     props.onClose();
   };
 
@@ -140,8 +140,8 @@ export function WorkoutSheet(props: { programId: string | null; onClose: () => v
     <Sheet open={!!props.programId} onClose={props.onClose} title={`${program.name}`}>
       <div class="stack">
         <div class="row between">
-          <Pill tone="var(--a-health)">{phase === 'warmup' ? 'Warm-up' : phase === 'summary' ? 'Summary' : `${ei + 1} / ${program.items.length}`}</Pill>
-          <span class="tiny num">{minutes} min</span>
+          <Pill tone="var(--a-health)">{phase === 'warmup' ? 'วอร์มอัพ' : phase === 'summary' ? 'สรุป' : `${ei + 1} / ${program.items.length}`}</Pill>
+          <span class="tiny num">{minutes} นาที</span>
         </div>
 
         {phase === 'warmup' && (
@@ -150,13 +150,13 @@ export function WorkoutSheet(props: { programId: string | null; onClose: () => v
             <div class="card list">
               {WARMUP.map((w) => (
                 <div key={w.name} class="item">
-                  <span class="tiny num" style={{ width: '38px' }}>{w.sec}s</span>
+                  <span class="tiny num" style={{ width: '38px' }}>{w.sec} วิ</span>
                   <div class="grow"><div class="t">{w.name}</div><div class="d">{w.th}</div></div>
                 </div>
               ))}
             </div>
             <div class="banner">ออกกำลังกายเมื่อห่างมื้อใหญ่อย่างน้อย 2–3 ชม. ถ้ามีอาการแสบอกระหว่างทำ ให้ข้ามท่าที่ศีรษะต่ำ</div>
-            <button class="btn primary block" onClick={() => beginExercise(0)}>Warm-up done · start</button>
+            <button class="btn primary block" onClick={() => beginExercise(0)}>วอร์มอัพเสร็จ · เริ่ม</button>
           </>
         )}
 
@@ -168,45 +168,45 @@ export function WorkoutSheet(props: { programId: string | null; onClose: () => v
               <div class="sub">{ex.th} · {ex.levels[lvl].th}</div>
             </div>
             <div class="row wrap" style={{ gap: '6px' }}>
-              <Pill>{item.sets} sets</Pill>
-              <Pill>{item.min}–{item.max} {ex.mode === 'hold' ? 's' : 'reps'}{ex.perSide ? ' / side' : ''}</Pill>
-              <Pill>rest {item.rest}s</Pill>
-              {lastReps(ex.id) > 0 && <Pill tone="var(--a-trading)">last {lastReps(ex.id)}</Pill>}
+              <Pill>{item.sets} เซ็ต</Pill>
+              <Pill>{item.min}–{item.max} {ex.mode === 'hold' ? 'วิ' : 'ครั้ง'}{ex.perSide ? 'ต่อข้าง' : ''}</Pill>
+              <Pill>พัก {item.rest} วิ</Pill>
+              {lastReps(ex.id) > 0 && <Pill tone="var(--a-trading)">ครั้งก่อน {lastReps(ex.id)}</Pill>}
             </div>
-            <button class="chip" onClick={() => setShowCues(!showCues)}>{showCues ? 'Hide form cues' : 'Show form cues'}</button>
+            <button class="chip" onClick={() => setShowCues(!showCues)}>{showCues ? 'ซ่อนวิธีทำ' : 'ดูวิธีทำ'}</button>
             {showCues && (
               <div class="card pad guide">
                 <ul>{ex.cues.map((c) => <li key={c}>{c}</li>)}</ul>
                 {ex.safety && <div class="tiny" style={{ marginTop: '8px' }}>⚠ {ex.safety}</div>}
-                {ex.reflux && <div class="tiny" style={{ marginTop: '6px', color: 'var(--warn)' }}>Reflux: {ex.reflux}</div>}
+                {ex.reflux && <div class="tiny" style={{ marginTop: '6px', color: 'var(--warn)' }}>แสบร้อนกลางอก: {ex.reflux}</div>}
               </div>
             )}
             {phase === 'rest' ? (
               <div class="stack center">
-                <div class="eyebrow">Rest · next is set {si + 1} of {item.sets}</div>
+                <div class="eyebrow">พัก · ถัดไปเซ็ตที่ {si + 1} จาก {item.sets}</div>
                 <div class="display-num" style={{ fontSize: '56px' }}>{fmtClock(restLeft)}</div>
                 <div class="row" style={{ justifyContent: 'center', gap: '8px' }}>
-                  <button class="btn" onClick={() => setRestEnd(restEnd + 15000)}>+15 s</button>
-                  <button class="btn primary" onClick={() => { setRestEnd(0); setPhase('set'); }}>Skip rest</button>
+                  <button class="btn" onClick={() => setRestEnd(restEnd + 15000)}>+15 วิ</button>
+                  <button class="btn primary" onClick={() => { setRestEnd(0); setPhase('set'); }}>ข้ามการพัก</button>
                 </div>
               </div>
             ) : (
               <div class="stack center" style={{ alignItems: 'center' }}>
-                <div class="eyebrow">Set {si + 1} of {item.sets}</div>
+                <div class="eyebrow">เซ็ตที่ {si + 1} จาก {item.sets}</div>
                 {ex.mode === 'hold' && (
                   <div class="stack-sm" style={{ alignItems: 'center' }}>
-                    <div class="display-num" style={{ fontSize: '48px' }}>{holdEnd ? fmtClock(holdLeft) : `${reps}s`}</div>
-                    {!holdEnd && <button class="btn" onClick={() => setHoldEnd(Date.now() + reps * 1000)}>{I.play({ size: 16 })} Start {reps}s hold</button>}
+                    <div class="display-num" style={{ fontSize: '48px' }}>{holdEnd ? fmtClock(holdLeft) : `${reps} วิ`}</div>
+                    {!holdEnd && <button class="btn" onClick={() => setHoldEnd(Date.now() + reps * 1000)}>{I.play({ size: 16 })} เริ่มค้าง {reps} วิ</button>}
                   </div>
                 )}
-                <Stepper label={ex.mode === 'hold' ? 'seconds' : 'reps'} unit={ex.mode === 'hold' ? 's' : 'reps'} value={reps} onChange={setReps} min={0} max={200} step={ex.mode === 'hold' ? 5 : 1} />
+                <Stepper label={ex.mode === 'hold' ? 'วินาที' : 'ครั้ง'} unit={ex.mode === 'hold' ? 'วิ' : 'ครั้ง'} value={reps} onChange={setReps} min={0} max={200} step={ex.mode === 'hold' ? 5 : 1} />
                 <div class="tiny">ทำจนเหลือแรงอีก 1–2 ครั้ง แล้วใส่จำนวนที่ทำได้จริง</div>
-                <button class="btn primary block" onClick={logSet}>Log set</button>
+                <button class="btn primary block" onClick={logSet}>บันทึกเซ็ต</button>
               </div>
             )}
             <div class="row between">
-              <button class="btn small ghost" onClick={() => beginExercise(ei + 1)}>Skip exercise</button>
-              <button class="btn small ghost" onClick={() => setPhase('summary')}>End workout</button>
+              <button class="btn small ghost" onClick={() => beginExercise(ei + 1)}>ข้ามท่านี้</button>
+              <button class="btn small ghost" onClick={() => setPhase('summary')}>จบการออกกำลังกาย</button>
             </div>
           </>
         )}
@@ -214,26 +214,26 @@ export function WorkoutSheet(props: { programId: string | null; onClose: () => v
         {phase === 'summary' && (
           <>
             <div class="tiles">
-              <div class="tile"><div class="k">TIME</div><div class="v">{minutes}<span class="tiny"> min</span></div></div>
-              <div class="tile"><div class="k">SETS</div><div class="v">{totalSets}</div></div>
-              <div class="tile"><div class="k">REPS</div><div class="v">{totalReps}</div></div>
+              <div class="tile"><div class="k">เวลา</div><div class="v">{minutes}<span class="tiny"> นาที</span></div></div>
+              <div class="tile"><div class="k">เซ็ต</div><div class="v">{totalSets}</div></div>
+              <div class="tile"><div class="k">ครั้ง</div><div class="v">{totalReps}</div></div>
             </div>
             {levelUps.length > 0 && (
               <div class="card pad">
-                <div class="h3">Level up next time</div>
+                <div class="h3">ครั้งหน้าขึ้นระดับ</div>
                 <div class="sub">ทำครบเป้าทุกเซ็ตแล้ว ครั้งหน้าจะขยับท่าให้ยากขึ้น 1 ระดับ:</div>
                 <ul>{levelUps.map((id) => <li key={id}>{EXERCISES[id].name} → {EXERCISES[id].levels[levelOf(s.meta.levels, EXERCISES[id]) + 1]?.name}</li>)}</ul>
               </div>
             )}
             <div class="field">
-              <label>How hard was it?</label>
+              <label>หนักแค่ไหน</label>
               <div class="row wrap" style={{ gap: '6px' }}>
-                {[['Easy', 6], ['Solid', 8], ['Brutal', 10]].map(([l, v]) => (
+                {[['ง่าย', 6], ['หนักพอดี', 8], ['หนักมาก', 10]].map(([l, v]) => (
                   <button key={l} class={`chip ${rpe === v ? 'on' : ''}`} onClick={() => setRpe(v as number)}>{l}</button>
                 ))}
               </div>
             </div>
-            <button class="btn primary block" disabled={totalSets === 0} onClick={finish}>Save workout</button>
+            <button class="btn primary block" disabled={totalSets === 0} onClick={finish}>บันทึกการออกกำลังกาย</button>
             {totalSets === 0 && <div class="tiny center">ยังไม่มีเซ็ตที่บันทึก</div>}
           </>
         )}
@@ -303,9 +303,9 @@ export function BreathSheet(props: { presetId: string | null; onClose: () => voi
       logBreath({ start: startAt, minutes: mins, preset: preset.id });
       const itemId = preset.id === 'sleep' ? 'breath-night' : new Date().getHours() < 15 ? 'breath-am' : 'breath-pm';
       if (mins >= preset.minutes - 1 && preset.id !== 'sos') setCheck(today, itemId, true);
-      if (e) burstFrom(e, `${mins} min`, 'var(--a-home)');
-      else burst(window.innerWidth / 2, window.innerHeight / 2, `${mins} min`, 'var(--a-home)');
-      toast(`Breathing ${mins} min saved`);
+      if (e) burstFrom(e, `${mins} นาที`, 'var(--a-home)');
+      else burst(window.innerWidth / 2, window.innerHeight / 2, `${mins} นาที`, 'var(--a-home)');
+      toast(`บันทึกการหายใจท้อง ${mins} นาทีแล้ว`);
     }
     setRunning(false);
   };
@@ -327,11 +327,11 @@ export function BreathSheet(props: { presetId: string | null; onClose: () => voi
         <div class="display-num" style={{ fontSize: '40px' }}>{fmtClock(running ? left : total)}</div>
         <div class="row" style={{ gap: '8px' }}>
           {!running ? (
-            <button class="btn primary" onClick={() => { sound.unlock(); setStartAt(Date.now()); logged.current = false; setRunning(true); }}>{I.play({ size: 18 })} Start</button>
+            <button class="btn primary" onClick={() => { sound.unlock(); setStartAt(Date.now()); logged.current = false; setRunning(true); }}>{I.play({ size: 18 })} เริ่ม</button>
           ) : (
-            <button class="btn" onClick={(e) => save(e as unknown as Event)}>{I.stop({ size: 18 })} Finish</button>
+            <button class="btn" onClick={(e) => save(e as unknown as Event)}>{I.stop({ size: 18 })} เสร็จ</button>
           )}
-          <button class={`chip ${cues ? 'on' : ''}`} onClick={() => { sound.unlock(); setCues(!cues); }}>Sound cues</button>
+          <button class={`chip ${cues ? 'on' : ''}`} onClick={() => { sound.unlock(); setCues(!cues); }}>เสียงบอกจังหวะ</button>
         </div>
         <div class="tiny">เข้า {preset.inhale} วิ · ออก {preset.exhale} วิ · ประมาณ {Math.round(60 / (preset.inhale + preset.exhale))} ครั้ง/นาที</div>
       </div>
@@ -368,19 +368,19 @@ export function BodyScreen(props: { nav: Nav }) {
     <div class="screen">
       <div class="topbar">
         <div class="grow">
-          <div class="eyebrow">Train · Breathe · Health</div>
-          <h1 class="h1">Body</h1>
+          <div class="eyebrow">ออกกำลัง · หายใจ · สุขภาพ</div>
+          <h1 class="h1">ร่างกาย</h1>
         </div>
       </div>
-      <Seg id="body-view" options={[{ id: 'train', label: 'Train' }, { id: 'breathe', label: 'Breathe' }, { id: 'health', label: 'Health' }]} value={view} onChange={setView} />
+      <Seg id="body-view" options={[{ id: 'train', label: 'ออกกำลัง' }, { id: 'breathe', label: 'หายใจ' }, { id: 'health', label: 'สุขภาพ' }]} value={view} onChange={setView} />
 
       {view === 'train' && (
         <>
           <Glass class="hero" tone="var(--a-health)">
             <div class="glow" />
-            <div class="eyebrow">{todays ? `Today · ${s.settings.workoutTime}` : `Next · ${wdName(weekday(nextDay))} ${fmtShortDate(nextDay)}`}</div>
-            <h2 class="h1" style={{ margin: '6px 0 2px' }}>{nextProgram?.name || 'Rest day'}</h2>
-            <div class="sub">{nextProgram?.focus} · ~45 min · เสื่อผืนเดียว</div>
+            <div class="eyebrow">{todays ? `วันนี้ · ${s.settings.workoutTime}` : `ถัดไป · ${wdName(weekday(nextDay))} ${fmtShortDate(nextDay)}`}</div>
+            <h2 class="h1" style={{ margin: '6px 0 2px' }}>{nextProgram?.name || 'วันพัก'}</h2>
+            <div class="sub">{nextProgram?.focus} · ประมาณ 45 นาที · เสื่อผืนเดียว</div>
             <div class="list" style={{ margin: '10px 0' }}>
               {nextProgram?.items.map((it) => {
                 const ex = resolveExercise(it.ex, hasBand);
@@ -389,30 +389,30 @@ export function BodyScreen(props: { nav: Nav }) {
                   <button key={it.ex} class="item" onClick={() => setExInfo(ex)}>
                     <div class="grow">
                       <div class="t">{ex.name}</div>
-                      <div class="d">{ex.levels[lvl].name} · {it.sets}×{it.min}–{it.max}{ex.mode === 'hold' ? 's' : ''}{ex.perSide ? '/side' : ''}</div>
+                      <div class="d">{ex.levels[lvl].name} · {it.sets}×{it.min}–{it.max}{ex.mode === 'hold' ? ' วิ' : ''}{ex.perSide ? ' ต่อข้าง' : ''}</div>
                     </div>
-                    <span class="tiny">Lv {lvl + 1}</span>
+                    <span class="tiny">ระดับ {lvl + 1}</span>
                   </button>
                 );
               })}
             </div>
-            <button class="btn primary block" onClick={() => props.nav.workout(nextProgram?.id || 'A')}>{I.play({ size: 18 })} Start {nextProgram?.name}</button>
+            <button class="btn primary block" onClick={() => props.nav.workout(nextProgram?.id || 'A')}>{I.play({ size: 18 })} เริ่ม{nextProgram?.name}</button>
           </Glass>
           <div class="tiles">
-            <div class="tile"><div class="k">THIS WEEK</div><div class="v">{stats.workouts.thisWeek}<span class="tiny">/3</span></div></div>
-            <div class="tile"><div class="k">WEEK STREAK</div><div class="v">{stats.workouts.weekStreak}</div></div>
-            <div class="tile"><div class="k">PUSH-UP PR</div><div class="v">{stats.workouts.pushupBest || '–'}</div></div>
+            <div class="tile"><div class="k">สัปดาห์นี้</div><div class="v">{stats.workouts.thisWeek}<span class="tiny">/3</span></div></div>
+            <div class="tile"><div class="k">สัปดาห์ติดกัน</div><div class="v">{stats.workouts.weekStreak}</div></div>
+            <div class="tile"><div class="k">วิดพื้นดีที่สุด</div><div class="v">{stats.workouts.pushupBest || '–'}</div></div>
           </div>
           <Glass class="pad stack-sm">
-            <div class="h3">Pull exercises</div>
-            <div class="sub">ท่าดึงกล้ามหลังที่ปลอดภัยที่สุดแบบไม่ต้องเจาะผนังคือยางยืด + door anchor ไม่มีความเสี่ยงตกแบบบาร์โหน ระหว่างยังไม่มีใช้ท่า Prone Y-T-W แทน</div>
-            <button class={`chip ${hasBand ? 'on' : ''}`} onClick={() => saveMeta({ hasBand: !hasBand })}>{hasBand ? 'I have a band ✓' : 'I have a resistance band'}</button>
+            <div class="h3">ท่าดึง</div>
+            <div class="sub">ท่าดึงกล้ามหลังที่ปลอดภัยที่สุดแบบไม่ต้องเจาะผนังคือยางยืด + ตัวยึดประตู ไม่มีความเสี่ยงตกแบบบาร์โหน ระหว่างยังไม่มีใช้ท่านอนคว่ำยกแขน Y-T-W แทน</div>
+            <button class={`chip ${hasBand ? 'on' : ''}`} onClick={() => saveMeta({ hasBand: !hasBand })}>{hasBand ? 'มียางยืดแล้ว ✓' : 'มียางยืดออกกำลังกาย'}</button>
           </Glass>
           <Glass class="pad stack-sm">
-            <div class="h3">12-week training map</div>
-            <HeatMap data={stats.workouts.days} unit="workouts" title="Workouts per day, last 12 weeks" tone="var(--a-health)" />
+            <div class="h3">ออกกำลังกาย 12 สัปดาห์ล่าสุด</div>
+            <HeatMap data={stats.workouts.days} unit="ครั้ง" title="ออกกำลังกายแต่ละวัน 12 สัปดาห์ล่าสุด" tone="var(--a-health)" />
           </Glass>
-          <div class="section-head"><h2 class="h2">Exercise library</h2></div>
+          <div class="section-head"><h2 class="h2">ท่าทั้งหมด</h2></div>
           <Glass class="list">
             {Object.values(EXERCISES).map((ex) => (
               <button key={ex.id} class="item" onClick={() => setExInfo(ex)}>
@@ -429,10 +429,10 @@ export function BodyScreen(props: { nav: Nav }) {
           <Glass class="pad stack">
             <div class="row between">
               <div>
-                <div class="eyebrow">Today</div>
-                <div class="display-num" style={{ fontSize: '30px' }}>{stats.breath.todayMin}<span class="tiny"> / {s.settings.breathTargetMin} min</span></div>
+                <div class="eyebrow">วันนี้</div>
+                <div class="display-num" style={{ fontSize: '30px' }}>{stats.breath.todayMin}<span class="tiny"> / {s.settings.breathTargetMin} นาที</span></div>
               </div>
-              <Ring value={stats.breath.todayMin / s.settings.breathTargetMin} size={64} tone="var(--a-home)" label="Breathing goal">
+              <Ring value={stats.breath.todayMin / s.settings.breathTargetMin} size={64} tone="var(--a-home)" label="เป้าหมายหายใจท้อง">
                 <span class="tiny num">{Math.round((stats.breath.todayMin / s.settings.breathTargetMin) * 100)}%</span>
               </Ring>
             </div>
@@ -442,13 +442,13 @@ export function BodyScreen(props: { nav: Nav }) {
             {BREATH_PRESETS.map((p) => (
               <button key={p.id} class="glass hubtile" style={{ '--tone': 'var(--a-home)' } as JSX.CSSProperties} onClick={() => props.nav.breath(p.id)}>
                 <span class="ic">{I.wave({ size: 20 })}</span>
-                <div><div class="h3">{p.name}</div><div class="tiny">{p.minutes} min · {p.inhale}/{p.exhale}s</div></div>
+                <div><div class="h3">{p.name}</div><div class="tiny">{p.minutes} นาที · เข้า {p.inhale} ออก {p.exhale} วิ</div></div>
               </button>
             ))}
           </div>
           <Glass class="pad stack-sm">
-            <div class="h3">Last 14 days</div>
-            <BarChart data={stats.breath.days.map((p) => ({ key: p.key, label: fmtShortDate(p.key), value: Math.round(p.value) }))} unit="min" title="Breathing minutes per day" tone="var(--a-home)" labelLast />
+            <div class="h3">14 วันล่าสุด</div>
+            <BarChart data={stats.breath.days.map((p) => ({ key: p.key, label: fmtShortDate(p.key), value: Math.round(p.value) }))} unit="นาที" title="หายใจท้องแต่ละวัน" tone="var(--a-home)" labelLast />
           </Glass>
         </>
       )}
@@ -456,7 +456,7 @@ export function BodyScreen(props: { nav: Nav }) {
       {view === 'health' && (
         <>
           <Glass class="pad stack-sm">
-            <div class="row between"><div class="h3">Medicines today</div><span class="tiny">ตามที่แพทย์สั่ง</span></div>
+            <div class="row between"><div class="h3">ยาวันนี้</div><span class="tiny">ตามที่แพทย์สั่ง</span></div>
             {meds.length ? (
               <div class="list">
                 {meds.map((m) => {
@@ -472,33 +472,33 @@ export function BodyScreen(props: { nav: Nav }) {
                 })}
               </div>
             ) : (
-              <Empty title="No medicines set" body="แผนยายังไม่ถูกโหลด" />
+              <Empty title="ยังไม่มีรายการยา" body="แผนยายังไม่ถูกโหลด" />
             )}
-            <div class="tiny">Adherence 14 days · {Math.round(stats.meds.adherence14 * 100)}% · streak {stats.meds.streak} d</div>
+            <div class="tiny">กินยาครบ 14 วันล่าสุด · {Math.round(stats.meds.adherence14 * 100)}% · ติดกัน {stats.meds.streak} วัน</div>
           </Glass>
 
           <Glass class="pad stack-sm">
-            <div class="row between"><div class="h3">Symptoms · 30 days</div><button class="chip" onClick={props.nav.checkin}>Check-in</button></div>
+            <div class="row between"><div class="h3">อาการ · 30 วัน</div><button class="chip" onClick={props.nav.checkin}>เช็คอิน</button></div>
             {sym.length ? (
               <LineChart
-                title="Belching and heartburn scores, 0 to 10, last 30 days"
+                title="คะแนนเรอและแสบร้อนกลางอก 0 ถึง 10 ใน 30 วันล่าสุด"
                 max={10}
                 series={[
-                  { name: 'Belching', color: 'var(--series-1)', points: days30.map((k) => ({ key: k, value: symMap.get(k)?.belch })) },
-                  { name: 'Heartburn', color: 'var(--series-2)', points: days30.map((k) => ({ key: k, value: symMap.get(k)?.heartburn })) },
+                  { name: 'เรอ', color: 'var(--series-1)', points: days30.map((k) => ({ key: k, value: symMap.get(k)?.belch })) },
+                  { name: 'แสบร้อนกลางอก', color: 'var(--series-2)', points: days30.map((k) => ({ key: k, value: symMap.get(k)?.heartburn })) },
                 ]}
               />
             ) : (
-              <Empty title="No check-ins yet" body="เช็คอินทุกคืนตอน Wind-down แล้วกราฟแนวโน้มจะขึ้นที่นี่ ใช้คุยกับหมอได้" />
+              <Empty title="ยังไม่มีการเช็คอิน" body="เช็คอินทุกคืนก่อนนอน แล้วกราฟแนวโน้มจะขึ้นที่นี่ ใช้คุยกับหมอได้" />
             )}
           </Glass>
 
           <div class="tiles two">
-            <div class="tile"><div class="k">LIGHTS-OUT STREAK</div><div class="v">{stats.sleep.streak}<span class="tiny"> nights</span></div></div>
-            <div class="tile"><div class="k">ON TIME · 14 D</div><div class="v">{stats.sleep.last14}<span class="tiny">/14</span></div></div>
+            <div class="tile"><div class="k">ปิดไฟตรงเวลาติดกัน</div><div class="v">{stats.sleep.streak}<span class="tiny"> คืน</span></div></div>
+            <div class="tile"><div class="k">ตรงเวลา · 14 วัน</div><div class="v">{stats.sleep.last14}<span class="tiny">/14</span></div></div>
           </div>
 
-          <div class="section-head"><h2 class="h2">Your plan</h2><span class="tiny">แหล่งอ้างอิงอยู่ท้ายแต่ละหัวข้อ</span></div>
+          <div class="section-head"><h2 class="h2">แผนของคุณ</h2><span class="tiny">แหล่งอ้างอิงอยู่ท้ายแต่ละหัวข้อ</span></div>
           {(s.plan?.guides || []).length ? (
             <Glass class="list">
               {(s.plan?.guides || []).map((g) => (
@@ -510,7 +510,7 @@ export function BodyScreen(props: { nav: Nav }) {
                   {openGuide === g.id && (
                     <div class="guide" style={{ padding: '0 16px 16px' }}>
                       <ul>{g.points.map((p) => <li key={p}>{p}</li>)}</ul>
-                      {g.evidence && <div class="tiny" style={{ marginTop: '10px' }}>Evidence: {g.evidence}</div>}
+                      {g.evidence && <div class="tiny" style={{ marginTop: '10px' }}>งานวิจัย: {g.evidence}</div>}
                       {!!g.sources?.length && (
                         <div class="src" style={{ marginTop: '6px' }}>
                           {g.sources.map((x, i) => (
@@ -524,12 +524,12 @@ export function BodyScreen(props: { nav: Nav }) {
               ))}
             </Glass>
           ) : (
-            <Glass><Empty title="Plan is loading" body="แผนสุขภาพส่วนตัวจะแสดงที่นี่" /></Glass>
+            <Glass><Empty title="กำลังโหลดแผน" body="แผนสุขภาพส่วนตัวจะแสดงที่นี่" /></Glass>
           )}
 
           {!!s.plan?.doctorQuestions?.length && (
             <>
-              <div class="section-head"><h2 class="h2">Ask your doctor</h2></div>
+              <div class="section-head"><h2 class="h2">คำถามถึงหมอ</h2></div>
               <Glass class="pad stack-sm">
                 <ol style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {s.plan.doctorQuestions.map((q) => <li key={q.id}><b>{q.q}</b>{q.why && <div class="tiny">{q.why}</div>}</li>)}
@@ -538,10 +538,10 @@ export function BodyScreen(props: { nav: Nav }) {
                   class="btn small"
                   onClick={() => {
                     const text = (s.plan?.doctorQuestions || []).map((q, i) => `${i + 1}. ${q.q}`).join('\n');
-                    navigator.clipboard?.writeText(text).then(() => toast('Copied'), () => toast('Select the text to copy'));
+                    navigator.clipboard?.writeText(text).then(() => toast('คัดลอกแล้ว'), () => toast('เลือกข้อความแล้วคัดลอกเอง'));
                   }}
                 >
-                  Copy list
+                  คัดลอกรายการ
                 </button>
               </Glass>
             </>
@@ -555,16 +555,16 @@ export function BodyScreen(props: { nav: Nav }) {
             <div class="sub">{exInfo.th}</div>
             <div class="card pad guide"><ul>{exInfo.cues.map((c) => <li key={c}>{c}</li>)}</ul></div>
             {exInfo.safety && <div class="banner">{exInfo.safety}</div>}
-            {exInfo.reflux && <div class="banner">Reflux: {exInfo.reflux}</div>}
-            <div class="h3">Progression</div>
+            {exInfo.reflux && <div class="banner">แสบร้อนกลางอก: {exInfo.reflux}</div>}
+            <div class="h3">ระดับความยาก</div>
             <div class="card list">
               {exInfo.levels.map((l, i) => {
                 const cur = levelOf(s.meta.levels, exInfo) === i;
                 return (
                   <button key={l.name} class="item" onClick={() => { saveMeta({ levels: { ...(s.meta.levels || {}), [exInfo.id]: i } }); toast(`${exInfo.name}: ${l.name}`); }}>
-                    <span class="tiny num" style={{ width: '28px' }}>Lv{i + 1}</span>
+                    <span class="tiny num" style={{ width: '44px' }}>ระดับ {i + 1}</span>
                     <div class="grow"><div class="t">{l.name}</div><div class="d">{l.th}</div></div>
-                    {cur && <Pill tone="var(--a-health)">Current</Pill>}
+                    {cur && <Pill tone="var(--a-health)">ปัจจุบัน</Pill>}
                   </button>
                 );
               })}

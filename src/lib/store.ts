@@ -203,7 +203,7 @@ class Store {
   private onDbError = (e: unknown) => {
     const code = errCode(e);
     if (code === 'revoked' || code === 'not_granted') {
-      this.s = { ...this.s, notice: 'Cloud sync is off for this view. Changes stay on this device.' };
+      this.s = { ...this.s, notice: 'หน้านี้ซิงก์ขึ้นคลาวด์ไม่ได้ ข้อมูลที่แก้จะเก็บไว้ในเครื่องนี้ก่อน' };
       this.emit();
     }
   };
@@ -324,7 +324,7 @@ class Store {
         const failed = lsGet<Record<string, Op>>(K_FAILED) || {};
         failed[path + '#' + Date.now()] = op;
         lsSet(K_FAILED, failed);
-        this.s = { ...this.s, failed: Object.keys(failed).length, notice: `A change could not be saved (${code}). It is kept on this device.` };
+        this.s = { ...this.s, failed: Object.keys(failed).length, notice: `บันทึกขึ้นคลาวด์ไม่สำเร็จ (${code}) ข้อมูลยังอยู่ในเครื่องนี้` };
       }
     } finally {
       this.inflight.delete(path);
@@ -382,7 +382,7 @@ class Store {
   }
 
   importAll(data: any) {
-    if (!data || data.app !== 'Basz OS') throw new Error('This file is not a Basz OS backup.');
+    if (!data || data.app !== 'Basz OS') throw new Error('ไฟล์นี้ไม่ใช่ไฟล์สำรองของ Basz OS');
     if (data.settings) this.write('cfg/settings', { kind: 'set', data: data.settings });
     if (data.plan) this.write('cfg/plan', { kind: 'set', data: data.plan });
     if (data.meta) this.write('cfg/meta', { kind: 'set', data: data.meta });

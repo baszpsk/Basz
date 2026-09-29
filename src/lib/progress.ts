@@ -8,6 +8,8 @@ import { addDays, parseHM } from './time';
 import type { DayLog, Digest, MonthLog, Plan, Settings, Task } from './types';
 
 export type Group = 'Day' | 'Sleep' | 'Body' | 'Health' | 'Seoulful';
+/** Section headings for each group. */
+export const GROUP_LABEL: Record<Group, string> = { Day: 'ประจำวัน', Sleep: 'การนอน', Body: 'ร่างกาย', Health: 'สุขภาพ', Seoulful: 'ร้าน Seoulful' };
 export interface Point { key: string; value: number }
 
 export interface Metric {
@@ -89,24 +91,24 @@ export function buildMetrics(
   if (first) for (let k = first; k <= today; k = addDays(k, 1)) span.push(k);
 
   const metric = (id: string, group: Group, label: string, unit: string, better: 'up' | 'down', tone: string, decimals = 0): Metric => ({ id, group, label, unit, better, tone, decimals, values: new Map() });
-  const routine = metric('routine', 'Day', 'Routine done', '%', 'up', 'var(--good)');
-  const tasksDone = metric('tasks', 'Day', 'Tasks done', '', 'up', 'var(--accent)');
-  const meds = metric('meds', 'Health', 'Meds taken', '%', 'up', 'var(--a-growth)');
-  const sleepH = metric('sleep', 'Sleep', 'Sleep', 'h', 'up', 'var(--a-home)', 1);
-  const eff = metric('efficiency', 'Sleep', 'Sleep efficiency', '%', 'up', 'var(--a-home)');
-  const lat = metric('latency', 'Sleep', 'Time to fall asleep', 'min', 'down', 'var(--a-home)');
-  const onTime = metric('lightsout', 'Sleep', 'Lights out on time, last 7 days', 'nights', 'up', 'var(--a-home)');
-  const quality = metric('quality', 'Sleep', 'Sleep quality', '/5', 'up', 'var(--a-home)');
-  const wk7 = metric('workouts', 'Body', 'Workouts, last 7 days', '', 'up', 'var(--a-health)');
-  const push = metric('pushup', 'Body', 'Push-up best set', 'reps', 'up', 'var(--a-health)');
-  const reps = metric('reps', 'Body', 'Workout reps', 'reps', 'up', 'var(--a-health)');
-  const breath = metric('breath', 'Body', 'Breathing', 'min', 'up', 'var(--a-health)');
-  const steps = metric('steps', 'Body', 'Steps', '', 'up', 'var(--a-health)');
-  const energy = metric('energy', 'Health', 'Energy', '/5', 'up', 'var(--a-personal)');
-  const belch = metric('belch', 'Health', 'Belching', '/10', 'down', 'var(--a-personal)');
-  const burn = metric('heartburn', 'Health', 'Heartburn', '/10', 'down', 'var(--a-personal)');
-  const sales = metric('sales', 'Seoulful', 'Sales reported', '฿', 'up', 'var(--a-seoulful)');
-  const rating = metric('rating', 'Seoulful', 'Review rating', '★', 'up', 'var(--a-seoulful)', 1);
+  const routine = metric('routine', 'Day', 'กิจวัตรที่ทำ', '%', 'up', 'var(--good)');
+  const tasksDone = metric('tasks', 'Day', 'งานที่เสร็จ', '', 'up', 'var(--accent)');
+  const meds = metric('meds', 'Health', 'กินยาครบ', '%', 'up', 'var(--a-growth)');
+  const sleepH = metric('sleep', 'Sleep', 'นอนหลับ', 'ชม.', 'up', 'var(--a-home)', 1);
+  const eff = metric('efficiency', 'Sleep', 'ประสิทธิภาพการนอน', '%', 'up', 'var(--a-home)');
+  const lat = metric('latency', 'Sleep', 'เวลากว่าจะหลับ', 'นาที', 'down', 'var(--a-home)');
+  const onTime = metric('lightsout', 'Sleep', 'ปิดไฟตรงเวลา 7 วันล่าสุด', 'คืน', 'up', 'var(--a-home)');
+  const quality = metric('quality', 'Sleep', 'คุณภาพการนอน', '/5', 'up', 'var(--a-home)');
+  const wk7 = metric('workouts', 'Body', 'ออกกำลังกาย 7 วันล่าสุด', 'ครั้ง', 'up', 'var(--a-health)');
+  const push = metric('pushup', 'Body', 'วิดพื้นเซ็ตที่ดีที่สุด', 'ครั้ง', 'up', 'var(--a-health)');
+  const reps = metric('reps', 'Body', 'จำนวนครั้งรวมที่ออกกำลัง', 'ครั้ง', 'up', 'var(--a-health)');
+  const breath = metric('breath', 'Body', 'หายใจท้อง', 'นาที', 'up', 'var(--a-health)');
+  const steps = metric('steps', 'Body', 'ก้าวเดิน', 'ก้าว', 'up', 'var(--a-health)');
+  const energy = metric('energy', 'Health', 'พลังงาน', '/5', 'up', 'var(--a-personal)');
+  const belch = metric('belch', 'Health', 'เรอ', '/10', 'down', 'var(--a-personal)');
+  const burn = metric('heartburn', 'Health', 'แสบร้อนกลางอก', '/10', 'down', 'var(--a-personal)');
+  const sales = metric('sales', 'Seoulful', 'ยอดขายที่รายงาน', '฿', 'up', 'var(--a-seoulful)');
+  const rating = metric('rating', 'Seoulful', 'ดาวรีวิว', '★', 'up', 'var(--a-seoulful)', 1);
 
   const inBed = parseHM(settings.wake, R) + 1440 - parseHM(settings.lightsOut, R);
   for (const k of span) {
@@ -203,7 +205,7 @@ export function summarize(m: Metric, today: string): Summary {
     isBest: !!latest && earlier.length > 0 && earlier.every((p) => better(latest.value, p.value)),
     count: pts.length,
     first: pts[0]?.key,
-    vsLabel: live ? `vs yesterday at ${m.pace!.at}` : undefined,
+    vsLabel: live ? `เทียบเมื่อวานเวลา ${m.pace!.at}` : undefined,
   };
 }
 

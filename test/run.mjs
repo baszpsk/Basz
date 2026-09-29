@@ -85,122 +85,123 @@ await page.click('.sheet .chip:has-text("พรุ่งนี้")');
 await page.waitForFunction(() => !document.body.textContent.includes('ต้องได้คำตอบภายในวันไหน?'));
 await page.waitForTimeout(200);
 await page.screenshot({ path: 'test/out/03-add-ready.png' });
-await page.click('button:has-text("Add task")');
+await page.click('.sheet button:has-text("เพิ่มงาน")');
 await page.waitForTimeout(300);
 await check(page.evaluate(() => [...window.__docs.keys()].some((k) => k.startsWith('tasks/') && window.__docs.get(k).title.includes('ซัพพลายเออร์กิมจิ'))), 'new task saved to db');
 
 // morning check-in records how long it took to fall asleep and time awake
-await page.click('.screen .chip:has-text("Check-in")');
+await page.click('.screen .chip:has-text("เช็คอิน")');
 await page.waitForSelector('#ci-lat');
 await page.click('#ci-lat .chip:has-text("< 15")');
 await page.click('#ci-awake .chip:has-text("แทบไม่ตื่น")');
-await page.click('button:has-text("Save check-in")');
+await page.click('button:has-text("บันทึกเช็คอิน")');
 await page.waitForTimeout(300);
 await check(page.evaluate(() => [...window.__docs.entries()].some(([k, v]) => k.startsWith('logs/') && Object.values(v.days || {}).some((d) => d.sleep?.latency === 10 && d.sleep?.awake === 0))), 'check-in saves sleep latency and awake time');
 
 // Tasks tab
-await page.click('.tab:has-text("Tasks")');
+await page.click('.tab:has-text("งาน")');
 await page.waitForTimeout(300);
 await page.screenshot({ path: 'test/out/04-tasks.png', fullPage: true });
 await noOverflow(page, 'tasks');
 await page.click('.item:has-text("จองหมอผิวหนัง") .check');
 await page.waitForTimeout(300);
 await check(page.evaluate(() => window.__docs.get('tasks/t2')?.status === 'done'), 'completing a task marks it done');
-await page.click('.seg button:has-text("Waiting")');
+await page.click('.seg button:has-text("รอคนอื่น")');
 await page.waitForTimeout(200);
 await page.click('.item:has-text("โคชูจัง")');
-await page.waitForSelector('text=Waiting on เชฟนุ่น');
-await page.click('button:has-text("Chased")');
+await page.waitForSelector('text=รอ เชฟนุ่น');
+await page.click('button:has-text("ตามแล้ว")');
 await page.waitForTimeout(200);
 await check(page.evaluate(() => (window.__docs.get('tasks/t3')?.followUps || 0) === 1), 'follow-up recorded');
 await page.keyboard.press('Escape');
 
 // Idea → steps
-await page.click('.chip:has-text("Idea → steps")');
+await page.click('.chip:has-text("ไอเดีย → ขั้นตอน")');
 await page.fill('#tasks-composer', 'เพิ่มเมนูซุปกิมจิชีสหน้าฝน');
 await page.click('.composer .icon-btn');
 await page.waitForSelector('text=ทดลองสูตรซุปกิมจิชีส 2 แบบ');
-await page.click('button:has-text("Add steps as tasks")');
+await page.click('button:has-text("เพิ่มขั้นตอนเป็นงาน")');
 await page.waitForTimeout(300);
 await check(page.evaluate(() => [...window.__docs.values()].some((d) => d && d.title === 'ให้พนักงานชิมและให้คะแนน')), 'idea steps saved as tasks');
 
 // Body: workout
-await page.click('.tab:has-text("Body")');
+await page.click('.tab:has-text("ร่างกาย")');
 await page.waitForTimeout(300);
 await page.screenshot({ path: 'test/out/05-body-train.png', fullPage: true });
 await noOverflow(page, 'body');
-await page.click('.hero button:has-text("Start")');
-await page.click('text=Warm-up done · start');
-await page.click('button:has-text("Log set")');
-await page.waitForSelector('text=Skip rest');
+await page.click('.hero button:has-text("เริ่ม")');
+await page.click('text=วอร์มอัพเสร็จ · เริ่ม');
+await page.click('button:has-text("บันทึกเซ็ต")');
+await page.waitForSelector('text=ข้ามการพัก');
 await page.screenshot({ path: 'test/out/06-workout-rest.png' });
-await page.click('text=Skip rest');
-await page.click('text=End workout');
-await page.click('.chip:has-text("Solid")');
-await page.click('button:has-text("Save workout")');
+await page.click('text=ข้ามการพัก');
+await page.click('text=จบการออกกำลังกาย');
+await page.click('.chip:has-text("หนักพอดี")');
+await page.click('button:has-text("บันทึกการออกกำลังกาย")');
 await page.waitForTimeout(300);
 await check(page.evaluate(() => [...window.__docs.values()].some((d) => d && d.workouts && Object.values(d.workouts).some((w) => w.rpe === 8))), 'workout saved with sets');
 
 // Breathe + Health
-await page.click('.seg button:has-text("Breathe")');
+await page.click('.seg button:has-text("หายใจ")');
 await page.waitForTimeout(200);
 await page.screenshot({ path: 'test/out/07-breathe.png', fullPage: true });
-await page.click('.hubtile:has-text("Belch SOS")');
-await page.click('.sheet button:has-text("Start")');
+await page.click('.hubtile:has-text("ตอนจะเรอ")');
+await page.click('.sheet button:has-text("เริ่ม")');
 await page.waitForTimeout(1200);
 await page.screenshot({ path: 'test/out/08-breath-run.png' });
-await page.click('.sheet button:has-text("Finish")');
+await page.click('.sheet button:has-text("เสร็จ")');
 await page.keyboard.press('Escape');
-await page.click('.seg button:has-text("Health")');
+await page.click('.seg button:has-text("สุขภาพ")');
 await page.waitForTimeout(300);
 await page.screenshot({ path: 'test/out/09-health.png', fullPage: true });
 await noOverflow(page, 'health');
-await check(page.locator('text=Medicines today').isVisible(), 'health shows medicines');
-await page.click('.item:has-text("Sleep")');
+await check(page.locator('text=ยาวันนี้').first().isVisible(), 'health shows medicines');
+await page.click('.item:has-text("การนอน")');
 await page.waitForTimeout(200);
 await page.screenshot({ path: 'test/out/10-guide.png', fullPage: true });
 
 // Hub pages
-await page.click('.tab:has-text("Hub")');
+await page.click('.tab:has-text("เมนู")');
 await page.waitForTimeout(200);
 await page.screenshot({ path: 'test/out/11-hub.png', fullPage: true });
-for (const name of ['Seoulful', 'Markets', 'Inbox', 'Laundry', 'Shopping', 'Progress', 'Ask Claude', 'Hairline', 'Alarm & sleep', 'Settings']) {
-  await page.click(`.hubtile:has-text("${name}")`);
+const HUB = [['seoulful', 'Seoulful'], ['markets', 'หุ้น'], ['inbox', 'แจ้งเตือน'], ['laundry', 'ซักผ้า'], ['shopping', 'ของที่ต้องซื้อ'], ['progress', 'สถิติ'], ['askclaude', 'ถาม Claude'], ['hairline', 'ไรผม'], ['alarm', 'ปลุกและการนอน'], ['settings', 'ตั้งค่า']];
+for (const [name, label] of HUB) {
+  await page.click(`.hubtile:has-text("${label}")`);
   await page.waitForTimeout(250);
-  await page.screenshot({ path: `test/out/hub-${name.replace(/[^a-z]/gi, '').toLowerCase()}.png`, fullPage: true });
+  await page.screenshot({ path: `test/out/hub-${name}.png`, fullPage: true });
   await noOverflow(page, 'hub ' + name);
-  if (name === 'Progress') {
+  if (name === 'progress') {
     const txt = await page.locator('.screen').last().innerText();
-    await check(txt.includes('Push-up best set') && txt.includes('Belching') && /vs (yesterday|day before|\d)/.test(txt), 'progress compares metrics with their last value');
-    await check(!/\bXP\b|Level \d/.test(txt), 'progress has no XP or levels');
-    await page.click('.item:has-text("Push-up best set")');
+    await check(txt.includes('วิดพื้นเซ็ตที่ดีที่สุด') && txt.includes('เรอ') && /เทียบ(เมื่อวาน|วันก่อนหน้า| \d)/.test(txt), 'progress compares metrics with their last value');
+    await check(!/\bXP\b|Level \d|เลเวล/.test(txt), 'progress has no XP or levels');
+    await page.click('.item:has-text("วิดพื้นเซ็ตที่ดีที่สุด")');
     await page.waitForTimeout(300);
     const sheet = await page.locator('.sheet').innerText();
-    await check(sheet.includes('All-time best') && sheet.includes('7 days vs the 7 before'), 'metric sheet shows averages and all-time best');
-    await page.click('.sheet button[aria-label="Close"]');
+    await check(sheet.includes('ดีที่สุดตลอดกาล') && sheet.includes('7 วันล่าสุด เทียบ 7 วันก่อนหน้า'), 'metric sheet shows averages and all-time best');
+    await page.click('.sheet button[aria-label="ปิด"]');
     await page.waitForTimeout(200);
   }
-  if (name === 'Markets') {
+  if (name === 'markets') {
     const txt = await page.locator('.screen').last().innerText();
     await check(txt.includes('09:40–09:55') && !txt.includes('09:25'), 'markets routine follows the schedule');
   }
-  if (name === 'Laundry') {
-    const btn = page.locator('.screen button.btn.primary:has-text("Start")');
-    if (await btn.isDisabled()) await page.click('.item:has-text("Towels & bedding") .check');
+  if (name === 'laundry') {
+    const btn = page.locator('.screen button.btn.primary:has-text("เริ่มซัก")');
+    if (await btn.isDisabled()) await page.click('.item:has-text("ผ้าเช็ดตัวและเครื่องนอน") .check');
     await btn.click();
     await page.waitForTimeout(200);
     await check(page.evaluate(() => [...window.__docs.values()].some((d) => d && d.flow && d.flow.id === 'laundry')), 'laundry flow created');
   }
-  if (name === 'Settings') {
+  if (name === 'settings') {
     await page.fill('#set-wake', '09:15');
     await page.dispatchEvent('#set-wake', 'change');
     await page.waitForTimeout(200);
     await check(page.evaluate(() => window.__docs.get('cfg/settings')?.wake === '09:15'), 'settings saved');
-    await page.click('button:has-text("Save backup file")');
+    await page.click('button:has-text("บันทึกไฟล์สำรอง")');
     await page.waitForTimeout(200);
     await check(page.evaluate(() => window.__downloads.length === 1), 'backup offered as a download');
   }
-  await page.click('.icon-btn[aria-label="Back"]');
+  await page.click('.icon-btn[aria-label="กลับ"]');
   await page.waitForTimeout(150);
 }
 

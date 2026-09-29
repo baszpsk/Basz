@@ -149,7 +149,7 @@ body {
   color: var(--ink);
   font-family: var(--font-body);
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
@@ -222,8 +222,8 @@ button { cursor: pointer; }
 
 .topbar { display: flex; align-items: center; gap: 12px; padding-top: 4px; }
 .topbar .grow { flex: 1; min-width: 0; }
-.eyebrow { font-family: var(--font-display); font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
-.h1 { font-family: var(--font-display); font-weight: 750; font-size: 25px; letter-spacing: -0.025em; line-height: 1.18; margin: 0; text-wrap: balance; }
+.eyebrow { font-family: var(--font-display); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
+.h1 { font-family: var(--font-display); font-weight: 700; font-size: 25px; letter-spacing: -0.01em; line-height: 1.32; margin: 0; text-wrap: balance; }
 .hello { font-size: 27px; }
 .hello .name {
   background: linear-gradient(100deg, var(--accent), var(--accent-2) 50%, var(--accent-3), var(--accent));
@@ -234,7 +234,7 @@ button { cursor: pointer; }
   animation: flow 7s ease-in-out infinite alternate;
 }
 @keyframes flow { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
-.h2 { font-family: var(--font-display); font-weight: 750; font-size: 18px; letter-spacing: -0.018em; margin: 0; }
+.h2 { font-family: var(--font-display); font-weight: 700; font-size: 18px; letter-spacing: -0.005em; line-height: 1.35; margin: 0; }
 .h3 { font-weight: 650; font-size: 15.5px; margin: 0; }
 .sub { color: var(--ink-2); font-size: 14px; }
 .tiny { color: var(--ink-3); font-size: 12.5px; }
@@ -374,7 +374,7 @@ button { cursor: pointer; }
 .chip.on { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-ink); box-shadow: 0 6px 16px -8px var(--accent); }
 .chip .sw { width: 8px; height: 8px; border-radius: 50%; background: var(--tone, var(--accent)); }
 .pill {
-  display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 750; letter-spacing: 0.03em;
+  display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; letter-spacing: 0.01em;
   padding: 3px 9px; border-radius: 99px; font-family: var(--font-display);
   background: color-mix(in srgb, var(--tone, var(--accent)) 16%, transparent);
   color: color-mix(in srgb, var(--tone, var(--accent)) 80%, var(--mix-ink));
@@ -397,7 +397,7 @@ button { cursor: pointer; }
   padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
 }
 .tabbar .bar { display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px; border-radius: 999px; position: relative; background: linear-gradient(165deg, var(--glass-top), var(--glass-bottom) 70%), var(--glass-strong); }
-.tab { position: relative; z-index: 1; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 0 6px; color: var(--ink-3); font-size: 10.5px; font-weight: 750; letter-spacing: 0.02em; font-family: var(--font-display); transition: color 0.25s; }
+.tab { position: relative; z-index: 1; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 0 6px; color: var(--ink-3); font-size: 11.5px; font-weight: 700; font-family: var(--font-display); transition: color 0.25s; }
 .tab.on { color: var(--accent); }
 .tab svg { transition: transform 0.35s var(--spring); }
 .tab.on svg { transform: translateY(-1px) scale(1.06); animation: hop 0.55s var(--spring); }
@@ -460,7 +460,7 @@ button.item:active { background: var(--fill); }
 button.tile { display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; font: inherit; text-align: left; transition: transform 0.3s var(--spring); }
 button.tile:active { transform: scale(0.96); }
 .tile .v { font-family: var(--font-display); font-size: 24px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--tone, var(--ink)); }
-.tile .k { font-size: 11px; color: var(--ink-3); font-weight: 750; letter-spacing: 0.06em; font-family: var(--font-display); }
+.tile .k { font-size: 12px; color: var(--ink-3); font-weight: 700; letter-spacing: 0.02em; font-family: var(--font-display); }
 .chart { width: 100%; height: auto; display: block; overflow: visible; }
 .chart text { fill: var(--ink-3); font-size: 10px; font-family: var(--font-body); }
 

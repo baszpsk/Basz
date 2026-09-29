@@ -3,6 +3,8 @@ import { App } from './app';
 import { paintSky } from './lib/sky';
 import { store } from './lib/store';
 
+// Thai line breaking and font selection follow the document language.
+document.documentElement.lang = 'th';
 paintSky();
 store.init();
 const root = document.getElementById('app');

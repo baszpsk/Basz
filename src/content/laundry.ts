@@ -17,7 +17,7 @@ export interface FabricRule {
 export const FABRICS: FabricRule[] = [
   {
     id: 'towels',
-    name: 'Towels & bedding',
+    name: 'ผ้าเช็ดตัวและเครื่องนอน',
     items: 'ผ้าเช็ดตัว ปลอกหมอน ผ้าปูที่นอน',
     program: 'Cotton',
     temp: '60°C',
@@ -29,10 +29,10 @@ export const FABRICS: FabricRule[] = [
   },
   {
     id: 'under',
-    name: 'Underwear & boxers',
+    name: 'ชุดชั้นในและบ็อกเซอร์',
     items: 'กางเกงใน บ็อกเซอร์',
     program: 'Cotton',
-    temp: '40°C + ผงซักฟอกที่มี oxygen bleach (หรือ 60°C ถ้าป้ายผ้ารับได้)',
+    temp: '40°C + ผงขจัดคราบสูตรออกซิเจน (หรือ 60°C ถ้าป้ายผ้ารับได้)',
     spin: '1000',
     options: 'ใส่ถุงตาข่าย · ไม่ใช้น้ำยาปรับผ้านุ่มกับผ้ายืด/ผ้ากีฬา',
     dry: 'ตากทันทีหลังเครื่องหยุด ใช้ไม้หนีบแยกตัว',
@@ -41,7 +41,7 @@ export const FABRICS: FabricRule[] = [
   },
   {
     id: 'home',
-    name: 'Home tees',
+    name: 'เสื้อยืดอยู่บ้าน',
     items: 'เสื้ออยู่บ้าน',
     program: 'Mixed Fabric',
     temp: '30°C',
@@ -53,7 +53,7 @@ export const FABRICS: FabricRule[] = [
   },
   {
     id: 'outshirt',
-    name: 'Going-out shirts',
+    name: 'เสื้อใส่เที่ยว',
     items: 'เสื้อเที่ยว เสื้อสกรีน',
     program: 'Mixed Fabric (ตัวบาง/สกรีนใช้ Delicates)',
     temp: '30°C',
@@ -65,7 +65,7 @@ export const FABRICS: FabricRule[] = [
   },
   {
     id: 'pants',
-    name: 'Going-out pants (fabric)',
+    name: 'กางเกงผ้าใส่เที่ยว',
     items: 'กางเกงเที่ยวผ้า',
     program: 'Mixed Fabric',
     temp: '30°C',
@@ -77,10 +77,10 @@ export const FABRICS: FabricRule[] = [
   },
   {
     id: 'jeans',
-    name: 'Jeans',
+    name: 'กางเกงยีนส์',
     items: 'กางเกงยีนส์',
     program: 'Mixed Fabric',
-    temp: 'Cold–30°C',
+    temp: 'น้ำเย็น–30°C',
     spin: '800',
     options: 'กลับด้าน · ซักรวมเฉพาะผ้าสีเข้ม · รูดซิป',
     dry: 'กลับด้าน ตากในร่ม ห้ามตากแดดจัด',
@@ -99,18 +99,18 @@ export interface Load {
 }
 
 export const LOADS: Load[] = [
-  { id: 'L1', name: 'Towels & bedding', what: 'ผ้าเช็ดตัว + ปลอกหมอน + ผ้าปู', program: 'Cotton · 60°C · 1200', cycleMin: 150, day: 0 },
-  { id: 'L2', name: 'Underwear', what: 'กางเกงใน + บ็อกเซอร์ (ในถุงตาข่าย)', program: 'Cotton · 40°C + oxygen bleach · 1000', cycleMin: 120, day: 0 },
-  { id: 'L3', name: 'Colors', what: 'เสื้ออยู่บ้าน + เสื้อเที่ยว + กางเกงผ้า (กลับด้าน)', program: 'Mixed Fabric · 30°C · 800', cycleMin: 80, day: 3 },
-  { id: 'L4', name: 'Denim & darks', what: 'ยีนส์ + ผ้าสีเข้ม (กลับด้าน)', program: 'Mixed Fabric · 30°C · 800', cycleMin: 80, day: 3 },
+  { id: 'L1', name: 'ผ้าเช็ดตัวและเครื่องนอน', what: 'ผ้าเช็ดตัว + ปลอกหมอน + ผ้าปู', program: 'Cotton · 60°C · 1200', cycleMin: 150, day: 0 },
+  { id: 'L2', name: 'ชุดชั้นใน', what: 'กางเกงใน + บ็อกเซอร์ (ในถุงตาข่าย)', program: 'Cotton · 40°C + ผงขจัดคราบสูตรออกซิเจน · 1000', cycleMin: 120, day: 0 },
+  { id: 'L3', name: 'ผ้าสี', what: 'เสื้ออยู่บ้าน + เสื้อเที่ยว + กางเกงผ้า (กลับด้าน)', program: 'Mixed Fabric · 30°C · 800', cycleMin: 80, day: 3 },
+  { id: 'L4', name: 'ยีนส์และผ้าสีเข้ม', what: 'ยีนส์ + ผ้าสีเข้ม (กลับด้าน)', program: 'Mixed Fabric · 30°C · 800', cycleMin: 80, day: 3 },
 ];
 
 /** Steps of the laundry flow. `after` = minutes after the previous step is done. */
 export const LAUNDRY_STEPS = [
-  { title: 'Load & start', th: 'ใส่ผ้า ตั้งโปรแกรม แล้วกด Start' },
-  { title: 'Hang to dry', th: 'ตากทันทีที่เครื่องหยุด เว้นระยะ เปิดพัดลม' },
-  { title: 'Collect when dry', th: 'จับดูว่าแห้งสนิท โดยเฉพาะตะเข็บและขอบเอว' },
-  { title: 'Fold & put away', th: 'พับเก็บขึ้นห้อง งานนี้ถึงจะนับว่าเสร็จ' },
+  { title: 'ใส่ผ้า เริ่มซัก', th: 'ใส่ผ้า ตั้งโปรแกรม แล้วกด Start' },
+  { title: 'ตากผ้า', th: 'ตากทันทีที่เครื่องหยุด เว้นระยะ เปิดพัดลม' },
+  { title: 'เก็บผ้าเมื่อแห้ง', th: 'จับดูว่าแห้งสนิท โดยเฉพาะตะเข็บและขอบเอว' },
+  { title: 'พับเก็บ', th: 'พับเก็บขึ้นห้อง งานนี้ถึงจะนับว่าเสร็จ' },
 ];
 
 export const SMELL_FIX = [
@@ -119,13 +119,13 @@ export const SMELL_FIX = [
   'ปั่นหมาดให้สูงที่สุดที่ผ้ารับได้ ผ้าจะเหลือน้ำน้อย แห้งเร็วขึ้นมาก',
   'ตั้ง Delay End ให้เครื่องเสร็จตอนที่คุณพร้อมตาก ไม่ปล่อยผ้าเปียกค้างในถัง',
   'เปิดพัดลมเป่าราวตากผ้า 2–4 ชม. แขวนให้มีช่องว่างระหว่างตัว',
-  'ผ้าเช็ดตัวและชุดชั้นในใช้ 60°C หรือ 40°C กับผงซักฟอกที่มี oxygen bleach',
+  'ผ้าเช็ดตัวและชุดชั้นในใช้ 60°C หรือ 40°C คู่กับผงขจัดคราบสูตรออกซิเจน',
   'ทำ Tub Clean เดือนละครั้ง และแง้มประตูกับลิ้นชักผงซักฟอกไว้หลังซักทุกครั้ง',
 ];
 
 export const MACHINE_CARE = [
-  { id: 'tubclean', title: 'Tub Clean', th: 'เลือกโปรแกรม Tub Clean ถังเปล่า ไม่ต้องใส่ผงซักฟอก (ทำเมื่อจอขึ้น tcL ด้วย)', everyDays: 30 },
-  { id: 'filter', title: 'Drain pump filter', th: 'เปิดฝาเล็กมุมล่างขวา วางถาดและผ้ารองน้ำก่อน แล้วค่อยหมุนฟิลเตอร์ออกล้าง', everyDays: 60 },
-  { id: 'gasket', title: 'Door gasket', th: 'เช็ดขอบยางประตูให้แห้ง เอาเศษผ้าออก แง้มประตูทิ้งไว้', everyDays: 7 },
-  { id: 'drawer', title: 'Detergent drawer', th: 'ถอดลิ้นชักผงซักฟอกออกมาล้างคราบ', everyDays: 30 },
+  { id: 'tubclean', title: 'ล้างถังซัก', th: 'เลือกโปรแกรม Tub Clean ถังเปล่า ไม่ต้องใส่ผงซักฟอก (ทำเมื่อจอขึ้น tcL ด้วย)', everyDays: 30 },
+  { id: 'filter', title: 'ล้างฟิลเตอร์ปั๊มน้ำทิ้ง', th: 'เปิดฝาเล็กมุมล่างขวา วางถาดและผ้ารองน้ำก่อน แล้วค่อยหมุนฟิลเตอร์ออกล้าง', everyDays: 60 },
+  { id: 'gasket', title: 'เช็ดขอบยางประตู', th: 'เช็ดขอบยางประตูให้แห้ง เอาเศษผ้าออก แง้มประตูทิ้งไว้', everyDays: 7 },
+  { id: 'drawer', title: 'ล้างลิ้นชักผงซักฟอก', th: 'ถอดลิ้นชักผงซักฟอกออกมาล้างคราบ', everyDays: 30 },
 ];

@@ -14,10 +14,10 @@ import { AddSheet, TaskSheet, TasksScreen } from './screens/Tasks';
 import { CheckinSheet, PlanSheet, TodayScreen, useDay } from './screens/Today';
 
 const TABS: { id: TabId; label: string; icon: (p?: { size?: number }) => JSX.Element }[] = [
-  { id: 'today', label: 'Today', icon: I.today },
-  { id: 'tasks', label: 'Tasks', icon: I.tasks },
-  { id: 'body', label: 'Body', icon: I.body },
-  { id: 'hub', label: 'Hub', icon: I.hub },
+  { id: 'today', label: 'วันนี้', icon: I.today },
+  { id: 'tasks', label: 'งาน', icon: I.tasks },
+  { id: 'body', label: 'ร่างกาย', icon: I.body },
+  { id: 'hub', label: 'เมนู', icon: I.hub },
 ];
 
 function TabBar(props: { tab: TabId; setTab: (t: TabId) => void; badges: Partial<Record<TabId, number>> }) {
@@ -39,7 +39,7 @@ function TabBar(props: { tab: TabId; setTab: (t: TabId) => void; badges: Partial
     return () => window.removeEventListener('resize', measure);
   }, [props.tab]);
   return (
-    <nav class="tabbar" aria-label="Main">
+    <nav class="tabbar" aria-label="เมนูหลัก">
       <div class="bar glass" ref={ref} role="tablist">
         <span class={`blob ${moving ? 'moving' : ''}`} style={{ left: blob.left + 'px', width: blob.width + 'px' }} />
         {TABS.map((t) => (
@@ -113,8 +113,8 @@ function Shell() {
         <div class="screen" style={{ paddingBottom: 0, animation: 'none' }}>
           <div class="banner">
             <span class="grow">{s.notice}</span>
-            {s.failed > 0 && <button class="btn small" onClick={() => store.retryFailed()}>Retry</button>}
-            <button class="icon-btn" aria-label="Dismiss" onClick={() => store.dismissNotice()}>{I.close({ size: 16 })}</button>
+            {s.failed > 0 && <button class="btn small" onClick={() => store.retryFailed()}>ลองใหม่</button>}
+            <button class="icon-btn" aria-label="ปิดข้อความ" onClick={() => store.dismissNotice()}>{I.close({ size: 16 })}</button>
           </div>
         </div>
       )}
@@ -141,10 +141,10 @@ export function App() {
     return (
       <div class="screen">
         <div class="glass pad stack">
-          <div class="h2">Something went wrong</div>
+          <div class="h2">มีบางอย่างผิดพลาด</div>
           <div class="sub">ข้อมูลของคุณยังอยู่ครบ ลองเปิดหน้านี้ใหม่อีกครั้ง ถ้ายังเป็นอยู่ให้ส่งข้อความด้านล่างให้ Claude</div>
           <pre class="card pad tiny" style={{ whiteSpace: 'pre-wrap', overflowX: 'auto' }}>{String((error as Error)?.message || error)}</pre>
-          <button class="btn primary" onClick={reset}>Try again</button>
+          <button class="btn primary" onClick={reset}>ลองใหม่</button>
         </div>
       </div>
     );

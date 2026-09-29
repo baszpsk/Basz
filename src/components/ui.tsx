@@ -110,7 +110,7 @@ export function Sheet(props: { open: boolean; onClose: () => void; title?: strin
         {props.title && (
           <div class="sheet-head">
             <h2 class="h2 grow">{props.title}</h2>
-            <button class="icon-btn" aria-label="Close" onClick={props.onClose}>
+            <button class="icon-btn" aria-label="ปิด" onClick={props.onClose}>
               {I.close({ size: 18 })}
             </button>
           </div>
@@ -126,14 +126,14 @@ export function Stepper(props: { value: number; onChange: (v: number) => void; m
   const clamp = (v: number) => Math.max(props.min ?? 0, Math.min(props.max ?? 9999, v));
   return (
     <div class="row" aria-label={props.label}>
-      <button class="icon-btn" aria-label={`Less ${props.label}`} onClick={() => { sound.tick(); props.onChange(clamp(props.value - step)); }}>
+      <button class="icon-btn" aria-label={`ลด ${props.label}`} onClick={() => { sound.tick(); props.onChange(clamp(props.value - step)); }}>
         <span style={{ fontSize: '22px', lineHeight: 1 }}>−</span>
       </button>
       <div class="display-num" style={{ minWidth: '64px', textAlign: 'center', fontSize: '28px' }}>
         {props.value}
         {props.unit && <span class="tiny"> {props.unit}</span>}
       </div>
-      <button class="icon-btn" aria-label={`More ${props.label}`} onClick={() => { sound.tick(); props.onChange(clamp(props.value + step)); }}>
+      <button class="icon-btn" aria-label={`เพิ่ม ${props.label}`} onClick={() => { sound.tick(); props.onChange(clamp(props.value + step)); }}>
         {I.plus({ size: 20 })}
       </button>
     </div>
@@ -185,13 +185,13 @@ export function CountUp(props: { value: number; ms?: number }) {
 export function Delta(props: { s: Summary; today: string }) {
   const { s } = props;
   if (!s.verdict || !s.latest || !s.prev || s.delta == null) return null;
-  const vs = s.vsLabel ?? (s.prev.key === addDays(s.latest.key, -1) ? (s.latest.key === props.today ? 'vs yesterday' : 'vs day before') : `vs ${fmtShortDate(s.prev.key)}`);
+  const vs = s.vsLabel ?? (s.prev.key === addDays(s.latest.key, -1) ? (s.latest.key === props.today ? 'เทียบเมื่อวาน' : 'เทียบวันก่อนหน้า') : `เทียบ ${fmtShortDate(s.prev.key)}`);
   const same = s.verdict === 'same';
   const arrow = same ? '=' : s.delta > 0 ? '▲' : '▼';
   const tone = s.verdict === 'better' ? 'var(--good)' : s.verdict === 'worse' ? 'var(--bad)' : 'var(--ink-3)';
   return (
     <span class="delta" style={{ '--tone': tone } as JSX.CSSProperties}>
-      {arrow} {same ? 'same' : `${s.delta > 0 ? '+' : '−'}${fmtValue(s.metric, Math.abs(s.delta))} ${s.verdict}`}
+      {arrow} {same ? 'เท่าเดิม' : `${s.delta > 0 ? '+' : '−'}${fmtValue(s.metric, Math.abs(s.delta))} ${s.verdict === 'better' ? 'ดีขึ้น' : 'แย่ลง'}`}
       <span class="vs">{vs}</span>
     </span>
   );

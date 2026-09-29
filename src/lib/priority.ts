@@ -28,11 +28,11 @@ export function rankTasks(tasks: Task[], now: number, today: string, rollover: n
     if (!isActionable(t, now)) continue;
     const reasons: string[] = [];
     let s = IMPACT[t.impact] ?? 8;
-    if (t.impact === 3) reasons.push('High impact');
+    if (t.impact === 3) reasons.push('ความสำคัญสูง');
     s += AREA_W[t.area] ?? 4;
     if (t.pinned) {
       s += 100;
-      reasons.push('Pinned');
+      reasons.push('ปักหมุดไว้');
     }
     if (t.due) {
       const dueDay = t.due.slice(0, 10);
@@ -40,33 +40,33 @@ export function rankTasks(tasks: Task[], now: number, today: string, rollover: n
       const overdueTs = dueToTs(t.due, rollover) < now;
       if (d < 0 || (d === 0 && overdueTs && t.due.includes('T'))) {
         s += 45 + Math.min(20, Math.abs(d) * 4);
-        reasons.push(d < 0 ? `Overdue ${Math.abs(d)} d` : 'Overdue');
+        reasons.push(d < 0 ? `เลยกำหนด ${Math.abs(d)} วัน` : 'เลยกำหนด');
       } else if (d === 0) {
         s += 35;
-        reasons.push('Due today');
+        reasons.push('กำหนดส่งวันนี้');
       } else if (d === 1) {
         s += 20;
-        reasons.push('Due tomorrow');
+        reasons.push('กำหนดส่งพรุ่งนี้');
       } else if (d <= 3) {
         s += 12;
-        reasons.push(`Due in ${d} d`);
+        reasons.push(`กำหนดส่งอีก ${d} วัน`);
       } else if (d <= 7) s += 6;
     }
     const est = t.estimateMin ?? 25;
     if (est <= 15) {
       s += 6;
-      reasons.push('Quick win');
+      reasons.push('ทำแป๊บเดียว');
     }
     const ageDays = Math.floor((now - t.createdAt) / 86400000);
     s += Math.min(10, Math.max(0, ageDays));
     const followUp = t.status === 'waiting';
     if (followUp) {
       s = 30 + (IMPACT[t.impact] ?? 8) + Math.min(15, (t.followUps || 0) * 5);
-      reasons.unshift(`Follow up · ${t.waitingOn || 'someone'}`);
+      reasons.unshift(`ตามงาน · ${t.waitingOn || 'คนที่รับงาน'}`);
     }
     if (t.flow) {
       s += 50;
-      reasons.unshift('Next step');
+      reasons.unshift('ขั้นถัดไป');
     }
     out.push({ task: t, score: s, reasons, followUp });
   }
@@ -103,10 +103,10 @@ export function slotTasks(blocks: Block[], ranked: Ranked[], nowMin: number, man
 }
 
 export const AREA_LABEL: Record<Area, string> = {
-  health: 'Health',
-  seoulful: 'Seoulful',
-  trading: 'Trading',
-  home: 'Home',
-  growth: 'Growth',
-  personal: 'Personal',
+  health: 'สุขภาพ',
+  seoulful: 'ร้าน',
+  trading: 'เทรด',
+  home: 'บ้าน',
+  growth: 'พัฒนาตัวเอง',
+  personal: 'ส่วนตัว',
 };

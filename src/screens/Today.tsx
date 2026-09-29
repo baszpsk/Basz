@@ -40,10 +40,10 @@ export function useDay() {
 }
 
 function greeting(h: number) {
-  if (h >= 5 && h < 12) return 'Good morning';
-  if (h >= 12 && h < 17) return 'Good afternoon';
-  if (h >= 17 && h < 22) return 'Good evening';
-  return 'Late night';
+  if (h >= 5 && h < 12) return 'อรุณสวัสดิ์';
+  if (h >= 12 && h < 17) return 'สวัสดีตอนบ่าย';
+  if (h >= 17 && h < 22) return 'สวัสดีตอนเย็น';
+  return 'ดึกแล้ว';
 }
 
 function ItemList(props: { block: Block; checks: Record<string, number | null>; today: string; compact?: boolean }) {
@@ -86,19 +86,19 @@ function ActionButton(props: { block: Block; nav: Nav; firstTask?: Task }) {
   const n = props.nav;
   switch (b.action) {
     case 'focus':
-      return props.firstTask ? <button class="btn primary" onClick={() => n.task(props.firstTask!)}>{I.arrow({ size: 18 })} Open task</button> : null;
+      return props.firstTask ? <button class="btn primary" onClick={() => n.task(props.firstTask!)}>{I.arrow({ size: 18 })} เปิดงาน</button> : null;
     case 'workout':
-      return <button class="btn primary" onClick={() => n.workout(b.program || 'A')}>{I.play({ size: 18 })} Start {b.title}</button>;
+      return <button class="btn primary" onClick={() => n.workout(b.program || 'A')}>{I.play({ size: 18 })} เริ่ม{b.title}</button>;
     case 'breath':
-      return <button class="btn primary" onClick={() => n.breath(b.id === 'read' ? 'sleep' : 'meal')}>{I.wave({ size: 18 })} Start breathing</button>;
+      return <button class="btn primary" onClick={() => n.breath(b.id === 'read' ? 'sleep' : 'meal')}>{I.wave({ size: 18 })} เริ่มหายใจท้อง</button>;
     case 'walk':
-      return <button class="btn primary" onClick={() => n.breath('daily')}>{I.clock({ size: 18 })} Walk timer</button>;
+      return <button class="btn primary" onClick={() => n.breath('daily')}>{I.clock({ size: 18 })} จับเวลาเดิน</button>;
     case 'laundry':
-      return <button class="btn primary" onClick={() => n.hub('laundry')}>{I.shirt({ size: 18 })} Start laundry</button>;
+      return <button class="btn primary" onClick={() => n.hub('laundry')}>{I.shirt({ size: 18 })} เริ่มซักผ้า</button>;
     case 'plan':
-      return <button class="btn primary" onClick={() => n.plan()}>{I.spark({ size: 18 })} Plan it</button>;
+      return <button class="btn primary" onClick={() => n.plan()}>{I.spark({ size: 18 })} วางแผน</button>;
     case 'checkin':
-      return <button class="btn" onClick={() => n.checkin()}>{I.stethoscope({ size: 18 })} Check-in</button>;
+      return <button class="btn" onClick={() => n.checkin()}>{I.stethoscope({ size: 18 })} เช็คอิน</button>;
     default:
       return null;
   }
@@ -114,9 +114,9 @@ function NowCard(props: { d: ReturnType<typeof useDay>; nav: Nav }) {
     return (
       <Glass class="hero" tone={tone}>
         <div class="glow" />
-        <div class="eyebrow">Up next · {next ? fmtHM(next.start) : ''}</div>
-        <div class="h1" style={{ margin: '6px 0 4px' }}>{next ? next.title : 'Free time'}</div>
-        <div class="sub">{next ? `in ${fmtDuration(mins)} · ${next.sub || ''}` : 'Nothing scheduled right now.'}</div>
+        <div class="eyebrow">ถัดไป · {next ? fmtHM(next.start) : ''}</div>
+        <div class="h1" style={{ margin: '6px 0 4px' }}>{next ? next.title : 'เวลาว่าง'}</div>
+        <div class="sub">{next ? `อีก ${fmtDuration(mins)} · ${next.sub || ''}` : 'ตอนนี้ไม่มีอะไรในตาราง'}</div>
       </Glass>
     );
   }
@@ -130,9 +130,9 @@ function NowCard(props: { d: ReturnType<typeof useDay>; nav: Nav }) {
     return (
       <Glass class="hero" tone="var(--a-growth)">
         <div class="glow" />
-        <div class="row between"><span class="eyebrow">Now · Sleep</span>{I.moon({ size: 20 })}</div>
-        <div class="h1" style={{ margin: '8px 0 4px' }}>Time to sleep</div>
-        <div class="sub">Wake at {s.settings.wake} · {fmtDuration(toWake)} left. ถ้า 20 นาทียังไม่หลับ ลุกไปนั่งที่แสงสลัวก่อน</div>
+        <div class="row between"><span class="eyebrow">ตอนนี้ · การนอน</span>{I.moon({ size: 20 })}</div>
+        <div class="h1" style={{ margin: '8px 0 4px' }}>ได้เวลานอนแล้ว</div>
+        <div class="sub">ตื่น {s.settings.wake} · เหลือ {fmtDuration(toWake)} · ถ้า 20 นาทียังไม่หลับ ลุกไปนั่งที่แสงสลัวก่อน</div>
       </Glass>
     );
   }
@@ -140,23 +140,23 @@ function NowCard(props: { d: ReturnType<typeof useDay>; nav: Nav }) {
     <Glass class="hero" tone={tone}>
       <div class="glow" />
       <div class="row between">
-        <Pill tone={tone}>NOW · {fmtHM(cur.start)}–{fmtHM(cur.end)}</Pill>
-        <span class="tiny num">{fmtDuration(left)} left</span>
+        <Pill tone={tone}>ตอนนี้ · {fmtHM(cur.start)}–{fmtHM(cur.end)}</Pill>
+        <span class="tiny num">เหลือ {fmtDuration(left)}</span>
       </div>
       <h2 class="h1" style={{ margin: '10px 0 2px' }}>{cur.title}</h2>
       {cur.sub && <div class="sub">{cur.sub}</div>}
-      <div style={{ margin: '12px 0' }}><Progress value={done / total} tone={tone} label="Block progress" /></div>
+      <div style={{ margin: '12px 0' }}><Progress value={done / total} tone={tone} label="ความคืบหน้าช่วงนี้" /></div>
       {items.length > 0 && <ItemList block={cur} checks={checks} today={today} compact />}
       {firstTask && (
         <div class="card pad" style={{ margin: '8px 0 4px' }}>
-          <div class="eyebrow">Most important now</div>
+          <div class="eyebrow">สำคัญที่สุดตอนนี้</div>
           <div class="h3" style={{ marginTop: '2px' }}>{firstTask.title}</div>
-          <div class="tiny">{AREA_LABEL[firstTask.area]} · {firstTask.estimateMin || 25} min</div>
+          <div class="tiny">{AREA_LABEL[firstTask.area]} · {firstTask.estimateMin || 25} นาที</div>
         </div>
       )}
       <div class="row wrap" style={{ gap: '8px', marginTop: '10px' }}>
         <ActionButton block={cur} nav={props.nav} firstTask={firstTask} />
-        {next && <span class="tiny">Next · {fmtHM(next.start)} {next.title}</span>}
+        {next && <span class="tiny">ถัดไป · {fmtHM(next.start)} {next.title}</span>}
       </div>
     </Glass>
   );
@@ -176,13 +176,13 @@ function AlertsStrip(props: { alerts: Alert[]; nav: Nav }) {
           </div>
           {a.task && a.kind === 'flow' && (
             <div class="row" style={{ gap: '6px' }}>
-              <button class="btn small ghost" onClick={() => { snooze(a.task!, 30); toast('Snoozed 30 min'); }}>Later</button>
-              <button class="btn small" onClick={(e) => { completeTask(a.task!); sound.done(); burstFrom(e, ''); }}>Done</button>
+              <button class="btn small ghost" onClick={() => { snooze(a.task!, 30); toast('เลื่อนไป 30 นาทีแล้ว'); }}>ไว้ทีหลัง</button>
+              <button class="btn small" onClick={(e) => { completeTask(a.task!); sound.done(); burstFrom(e, ''); }}>เสร็จ</button>
             </div>
           )}
-          {a.task && a.kind !== 'flow' && <button class="btn small" onClick={() => props.nav.task(a.task!)}>Open</button>}
-          {a.kind === 'sleep' && <button class="btn small" onClick={() => props.nav.hub('alarm')}>Review</button>}
-          {a.kind === 'backup' && <button class="btn small" onClick={async () => { const r = await saveBackup(); toast(r === 'saved' ? 'Backup saved' : r === 'unavailable' ? 'Backup download is not available here' : 'Backup not saved'); }}>Save</button>}
+          {a.task && a.kind !== 'flow' && <button class="btn small" onClick={() => props.nav.task(a.task!)}>เปิด</button>}
+          {a.kind === 'sleep' && <button class="btn small" onClick={() => props.nav.hub('alarm')}>ดู</button>}
+          {a.kind === 'backup' && <button class="btn small" onClick={async () => { const r = await saveBackup(); toast(r === 'saved' ? 'บันทึกไฟล์สำรองแล้ว' : r === 'unavailable' ? 'ที่นี่ดาวน์โหลดไฟล์สำรองไม่ได้' : 'ยังไม่ได้บันทึกไฟล์สำรอง'); }}>บันทึก</button>}
         </div>
       ))}
     </Glass>
@@ -199,8 +199,8 @@ function Timeline(props: { d: ReturnType<typeof useDay>; onOpen: (b: Block) => v
   return (
     <Glass class="pad">
       <div class="section-head" style={{ padding: '0 0 8px' }}>
-        <h2 class="h2">Today</h2>
-        <button class="chip" onClick={() => setFull(!full)}>{full ? 'Show less' : 'Full day'}</button>
+        <h2 class="h2">วันนี้</h2>
+        <button class="chip" onClick={() => setFull(!full)}>{full ? 'ย่อ' : 'ทั้งวัน'}</button>
       </div>
       <div class="timeline">
         {visible.map((b) => {
@@ -212,7 +212,7 @@ function Timeline(props: { d: ReturnType<typeof useDay>; onOpen: (b: Block) => v
           if (showMarker) markerShown = true;
           return (
             <Fragment key={b.id}>
-              {showMarker && <div class="marker">☕ {cutoffHM} caffeine cut-off</div>}
+              {showMarker && <div class="marker">☕ {cutoffHM} หยุดคาเฟอีน</div>}
               <button class={`tl ${isNow ? 'now' : ''} ${past ? 'past' : ''}`} style={{ '--tone': blockTone(b) } as JSX.CSSProperties} onClick={() => props.onOpen(b)}>
                 <div class="row" style={{ alignItems: 'flex-start' }}>
                   <span class="time">{fmtHM(b.start)}</span>
@@ -298,17 +298,17 @@ export function CheckinSheet(props: { open: boolean; onClose: () => void }) {
     </div>
   );
   return (
-    <Sheet open={props.open} onClose={props.onClose} title="Daily check-in">
+    <Sheet open={props.open} onClose={props.onClose} title="เช็คอินประจำวัน">
       <div class="stack">
         <div class="sub">ให้คะแนนตามความรู้สึกทั้งวัน ใช้ดูแนวโน้มและนำไปคุยกับหมอได้ สองข้อแรกใช้ปรับเวลานอนให้อัตโนมัติ</div>
         {pick('เมื่อคืนใช้เวลากว่าจะหลับ', [[10, '< 15 นาที'], [22, '15–30'], [45, '30–60'], [75, '> 1 ชม.']], lat, setLat, 'ci-lat')}
         {pick('ตื่นกลางดึกรวม', [[0, 'แทบไม่ตื่น'], [10, '5–15 นาที'], [22, '15–30'], [45, '30–60'], [75, '> 1 ชม.']], awk, setAwk, 'ci-awake')}
-        {scale('Belching', belch, setBelch, 10, '0 ไม่มี', '10 ทั้งวัน', 'ci-belch')}
-        {scale('Heartburn / reflux', heart, setHeart, 10, '0 ไม่มี', '10 หนักมาก', 'ci-heart')}
-        {scale('Energy', energy, setEnergy, 5, '1 หมดแรง', '5 สดชื่น', 'ci-energy')}
-        {scale('Last night’s sleep', sleepQ, setSleepQ, 5, '1 แย่', '5 ดีมาก', 'ci-sleep')}
+        {scale('เรอ', belch, setBelch, 10, '0 ไม่มี', '10 ทั้งวัน', 'ci-belch')}
+        {scale('แสบร้อนกลางอก', heart, setHeart, 10, '0 ไม่มี', '10 หนักมาก', 'ci-heart')}
+        {scale('พลังงาน', energy, setEnergy, 5, '1 หมดแรง', '5 สดชื่น', 'ci-energy')}
+        {scale('การนอนเมื่อคืน', sleepQ, setSleepQ, 5, '1 แย่', '5 ดีมาก', 'ci-sleep')}
         <div class="field">
-          <label for="ci-steps">Steps today (from iPhone Health)</label>
+          <label for="ci-steps">จำนวนก้าววันนี้ (จากแอป Health ใน iPhone)</label>
           <input id="ci-steps" class="input" inputMode="numeric" placeholder="เช่น 8200" value={steps} onInput={(e) => setSteps((e.target as HTMLInputElement).value.replace(/[^0-9]/g, ''))} />
         </div>
         <button
@@ -320,7 +320,7 @@ export function CheckinSheet(props: { open: boolean; onClose: () => void }) {
             props.onClose();
           }}
         >
-          Save check-in
+          บันทึกเช็คอิน
         </button>
       </div>
     </Sheet>
@@ -347,7 +347,7 @@ export function PlanSheet(props: { open: boolean; onClose: () => void }) {
       const order = (res.order || []).filter((id) => d.s.tasks[id]);
       patchDay(d.today, { plan: order });
       setAi({ summary: res.summary || '', notes: res.notes || {} });
-      toast('Today re-ordered by Claude');
+      toast('Claude จัดลำดับงานวันนี้ใหม่แล้ว');
     } catch (e) {
       setErr(copyForError(e));
     } finally {
@@ -359,13 +359,13 @@ export function PlanSheet(props: { open: boolean; onClose: () => void }) {
     sampleCap().then((x) => setHasAi(!!x));
   }, []);
   return (
-    <Sheet open={props.open} onClose={props.onClose} title="Plan">
+    <Sheet open={props.open} onClose={props.onClose} title="วางแผน">
       <div class="stack">
         {hasAi && (
           <Glass class="pad stack-sm">
-            <div class="h3">Re-order today with Claude</div>
-            <div class="sub">Claude reads your open tasks and the free blocks left today, then puts health first and revenue next.</div>
-            <button class="btn primary" disabled={busy} onClick={askClaude}>{busy ? 'Thinking…' : 'Plan today'}</button>
+            <div class="h3">ให้ Claude จัดลำดับงานวันนี้</div>
+            <div class="sub">Claude ดูงานที่ค้างกับเวลาว่างที่เหลือของวันนี้ แล้วเรียงใหม่ให้ สุขภาพมาก่อน ตามด้วยรายได้ร้าน</div>
+            <button class="btn primary" disabled={busy} onClick={askClaude}>{busy ? 'กำลังคิด…' : 'วางแผนวันนี้'}</button>
             {err && <div class="banner">{err}</div>}
             {ai && (
               <div class="stack-sm">
@@ -375,7 +375,7 @@ export function PlanSheet(props: { open: boolean; onClose: () => void }) {
             )}
           </Glass>
         )}
-        <div class="h3">Tomorrow's top 3</div>
+        <div class="h3">3 งานสำคัญของพรุ่งนี้</div>
         <div class="sub">เลือกได้ 3 งาน ระบบจะดันขึ้นบนสุดของพรุ่งนี้</div>
         <div class="card list">
           {candidates.map((r) => (
@@ -397,7 +397,7 @@ export function PlanSheet(props: { open: boolean; onClose: () => void }) {
             props.onClose();
           }}
         >
-          Save top 3
+          บันทึก 3 งานสำคัญ
         </button>
       </div>
     </Sheet>
@@ -429,14 +429,14 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
       <div class="topbar">
         <div class="grow">
           <div class="eyebrow">{fmtDayLong(today)} · {pad(now.getHours())}:{pad(now.getMinutes())}</div>
-          <h1 class="h1 hello">{greeting(now.getHours())}, <span class="name">{name}</span></h1>
+          <h1 class="h1 hello">{greeting(now.getHours())} <span class="name">{name}</span></h1>
         </div>
-        <button class="icon-btn" aria-label={`Notifications (${unread})`} onClick={props.nav.inbox}>
+        <button class="icon-btn" aria-label={`แจ้งเตือน (${unread})`} onClick={props.nav.inbox}>
           {I.bell({ size: 20 })}
           {unread > 0 && <span class="dot" />}
         </button>
-        <button aria-label={`Routine ${routinePct}% today, open progress`} style={{ border: 0, background: 'none', padding: 0 }} onClick={() => props.nav.hub('stats')}>
-          <Ring value={routinePct / 100} size={44} stroke={4} tone="var(--good)" label="Routine done today">
+        <button aria-label={`กิจวัตรวันนี้ ${routinePct}% เปิดหน้าสถิติ`} style={{ border: 0, background: 'none', padding: 0 }} onClick={() => props.nav.hub('stats')}>
+          <Ring value={routinePct / 100} size={44} stroke={4} tone="var(--good)" label="กิจวัตรที่ทำแล้ววันนี้">
             <span class="display-num" style={{ fontSize: '11px' }}>{routinePct}%</span>
           </Ring>
         </button>
@@ -447,26 +447,26 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
 
       <div class="tiles">
         <div class="tile" style={{ '--tone': 'var(--good)' } as JSX.CSSProperties}>
-          <div class="k">ROUTINE</div>
+          <div class="k">กิจวัตร</div>
           <div class="v"><CountUp value={doneItems} /><span class="tiny">/{allItems.length}</span></div>
-          <Progress value={allItems.length ? doneItems / allItems.length : 0} tone="var(--good)" label="Routine done" />
+          <Progress value={allItems.length ? doneItems / allItems.length : 0} tone="var(--good)" label="กิจวัตรที่ทำแล้ว" />
           {routineS && <Delta s={routineS} today={today} />}
         </div>
         <div class="tile" style={{ '--tone': 'var(--accent)' } as JSX.CSSProperties}>
-          <div class="k">TASKS DONE</div>
+          <div class="k">งานที่เสร็จ</div>
           <div class="v"><CountUp value={tasksS?.latest?.key === today ? tasksS.latest.value : 0} /></div>
           {tasksS?.latest?.key === today && <Delta s={tasksS} today={today} />}
         </div>
         <button class="tile" style={{ '--tone': 'var(--a-home)', textAlign: 'left', border: 0, color: 'inherit' } as JSX.CSSProperties} onClick={sleptToday ? () => props.nav.hub('stats') : props.nav.checkin}>
-          <div class="k">SLEEP</div>
-          <div class="v">{sleptToday ? sleepS!.latest!.value.toFixed(1) : '–'}<span class="tiny"> h</span></div>
-          {sleptToday ? <Delta s={sleepS!} today={today} /> : <div class="tiny">Check in to log</div>}
+          <div class="k">การนอน</div>
+          <div class="v">{sleptToday ? sleepS!.latest!.value.toFixed(1) : '–'}<span class="tiny"> ชม.</span></div>
+          {sleptToday ? <Delta s={sleepS!} today={today} /> : <div class="tiny">เช็คอินเพื่อบันทึก</div>}
         </button>
       </div>
 
       <div class="section-head">
-        <h2 class="h2">Top of your list</h2>
-        <button class="chip" onClick={props.nav.plan}>{I.spark({ size: 14 })} Plan</button>
+        <h2 class="h2">งานสำคัญที่สุด</h2>
+        <button class="chip" onClick={props.nav.plan}>{I.spark({ size: 14 })} วางแผน</button>
       </div>
       <Glass class="list">
         {top.length ? top.map((r) => <TaskRow key={r.task.id} task={r.task} reasons={r.reasons} onOpen={() => props.nav.task(r.task)} />) : <div class="empty">ยังไม่มีงาน พิมพ์ด้านล่างได้เลย</div>}
@@ -480,12 +480,12 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
           class={`chip ${dayLog.nightOut ? 'on' : ''}`}
           onClick={() => {
             patchDay(today, { nightOut: !dayLog.nightOut });
-            toast(dayLog.nightOut ? 'Night out removed' : 'Night out mode on · tomorrow becomes a recovery morning');
+            toast(dayLog.nightOut ? 'ปิดโหมดเที่ยวกลางคืนแล้ว' : 'เปิดโหมดเที่ยวกลางคืน · พรุ่งนี้เป็นเช้าพักฟื้น');
           }}
         >
-          {I.moon({ size: 14 })} {dayLog.nightOut ? 'Night out tonight' : 'Going out tonight?'}
+          {I.moon({ size: 14 })} {dayLog.nightOut ? 'คืนนี้ไปเที่ยว' : 'คืนนี้ออกไปเที่ยวไหม?'}
         </button>
-        <button class="chip" onClick={props.nav.checkin}>{I.stethoscope({ size: 14 })} Check-in</button>
+        <button class="chip" onClick={props.nav.checkin}>{I.stethoscope({ size: 14 })} เช็คอิน</button>
       </div>
 
       <BlockSheet block={openBlock} d={d} nav={props.nav} onClose={() => setOpenBlock(null)} />
