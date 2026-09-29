@@ -687,7 +687,7 @@ function AlarmPage(props: { back: () => void }) {
         <div class="h3">ช่วงเวลานอนของคุณ</div>
         <div class="sub">ขึ้นเตียงและปิดไฟ {s.settings.lightsOut} · ตื่น {s.settings.wake} · อยู่บนเตียง {inBed.toFixed(1)} ชม. เป้าหมายหลับจริงราว {(inBed - 0.5).toFixed(1)} ชม. (หักเวลาก่อนหลับราว 15 นาทีและตื่นกลางดึกสั้นๆ) เวลาตื่นที่เท่ากันทุกวันสำคัญกว่าจำนวนชั่วโมง</div>
         <div class="tiny">คาเฟอีนแก้วสุดท้ายก่อน {caffeineCutoff(s.settings)} (12 ชม. ก่อนปิดไฟ)</div>
-        <div class="tiny">เมื่อเลื่อนเวลาปิดไฟ ให้แก้อีก 2 ที่: Bedtime ในแอป Health และช่อง Parameter ของวิดเจ็ต Basz OS (กดค้างที่วิดเจ็ต → Edit Widget) ใส่ {s.settings.lightsOut}</div>
+        <div class="tiny">เมื่อเลื่อนเวลาปิดไฟ ให้แก้ Bedtime ในแอป Health เป็น {s.settings.lightsOut} ด้วย</div>
       </Glass>
       <SleepCoach />
     </div>
