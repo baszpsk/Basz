@@ -1,0 +1,131 @@
+// Laundry playbook for an LG FV1412-series front loader (12 kg, AI DD, Steam).
+// Goal: clothes stay new-looking (no fading, no pilling), clean and fresh.
+
+export interface FabricRule {
+  id: string;
+  name: string;
+  items: string;
+  program: string;
+  temp: string;
+  spin: string;
+  options: string;
+  dry: string;
+  every: string;
+  load: string;
+}
+
+export const FABRICS: FabricRule[] = [
+  {
+    id: 'towels',
+    name: 'Towels & bedding',
+    items: 'ผ้าเช็ดตัว ปลอกหมอน ผ้าปูที่นอน',
+    program: 'Cotton',
+    temp: '60°C',
+    spin: '1200',
+    options: 'Rinse+ ถ้าผิวแพ้ง่าย · ห้ามใส่น้ำยาปรับผ้านุ่ม',
+    dry: 'คลี่เต็มผืน เว้นระยะ เปิดพัดลมเป่า 2–4 ชม. ให้แห้งสนิทก่อนเก็บ',
+    every: 'ผ้าเช็ดตัวทุก 3 ครั้งที่ใช้ · ผ้าปูสัปดาห์ละครั้ง · ปลอกหมอน 2 ครั้ง/สัปดาห์ (ช่วงเป็นสิว)',
+    load: 'L1',
+  },
+  {
+    id: 'under',
+    name: 'Underwear & boxers',
+    items: 'กางเกงใน บ็อกเซอร์',
+    program: 'Cotton',
+    temp: '40°C + ผงซักฟอกที่มี oxygen bleach (หรือ 60°C ถ้าป้ายผ้ารับได้)',
+    spin: '1000',
+    options: 'ใส่ถุงตาข่าย · ไม่ใช้น้ำยาปรับผ้านุ่มกับผ้ายืด/ผ้ากีฬา',
+    dry: 'ตากทันทีหลังเครื่องหยุด ใช้ไม้หนีบแยกตัว',
+    every: 'ทุกครั้งที่ใส่',
+    load: 'L2',
+  },
+  {
+    id: 'home',
+    name: 'Home tees',
+    items: 'เสื้ออยู่บ้าน',
+    program: 'Mixed Fabric',
+    temp: '30°C',
+    spin: '800',
+    options: 'กลับด้านผ้า · ผงซักฟอกน้ำสูตรผ้าสี',
+    dry: 'กลับด้าน ตากในร่มบนไม้แขวน',
+    every: 'ทุก 1–2 ครั้งที่ใส่',
+    load: 'L3',
+  },
+  {
+    id: 'outshirt',
+    name: 'Going-out shirts',
+    items: 'เสื้อเที่ยว เสื้อสกรีน',
+    program: 'Mixed Fabric (ตัวบาง/สกรีนใช้ Delicates)',
+    temp: '30°C',
+    spin: '800',
+    options: 'กลับด้าน · ใส่ถุงตาข่าย · Steam (Wrinkle Care) ได้กับผ้าฝ้าย ไม่ใช้กับผ้าบาง',
+    dry: 'แขวนไม้แขวนทันที ตากในร่ม',
+    every: 'ทุก 1–2 ครั้งที่ใส่',
+    load: 'L3',
+  },
+  {
+    id: 'pants',
+    name: 'Going-out pants (fabric)',
+    items: 'กางเกงเที่ยวผ้า',
+    program: 'Mixed Fabric',
+    temp: '30°C',
+    spin: '800',
+    options: 'กลับด้าน · รูดซิปและติดกระดุมก่อนซัก',
+    dry: 'หนีบที่ขอบเอว ตากในร่ม',
+    every: 'ทุก 2–3 ครั้งที่ใส่',
+    load: 'L3',
+  },
+  {
+    id: 'jeans',
+    name: 'Jeans',
+    items: 'กางเกงยีนส์',
+    program: 'Mixed Fabric',
+    temp: 'Cold–30°C',
+    spin: '800',
+    options: 'กลับด้าน · ซักรวมเฉพาะผ้าสีเข้ม · รูดซิป',
+    dry: 'กลับด้าน ตากในร่ม ห้ามตากแดดจัด',
+    every: 'ทุก 3–5 ครั้งที่ใส่ หรือเมื่อมีกลิ่น/เปื้อน',
+    load: 'L4',
+  },
+];
+
+export interface Load {
+  id: 'L1' | 'L2' | 'L3' | 'L4';
+  name: string;
+  what: string;
+  program: string;
+  cycleMin: number;
+  day: number; // weekday to run it
+}
+
+export const LOADS: Load[] = [
+  { id: 'L1', name: 'Towels & bedding', what: 'ผ้าเช็ดตัว + ปลอกหมอน + ผ้าปู', program: 'Cotton · 60°C · 1200', cycleMin: 150, day: 0 },
+  { id: 'L2', name: 'Underwear', what: 'กางเกงใน + บ็อกเซอร์ (ในถุงตาข่าย)', program: 'Cotton · 40°C + oxygen bleach · 1000', cycleMin: 120, day: 0 },
+  { id: 'L3', name: 'Colors', what: 'เสื้ออยู่บ้าน + เสื้อเที่ยว + กางเกงผ้า (กลับด้าน)', program: 'Mixed Fabric · 30°C · 800', cycleMin: 80, day: 3 },
+  { id: 'L4', name: 'Denim & darks', what: 'ยีนส์ + ผ้าสีเข้ม (กลับด้าน)', program: 'Mixed Fabric · 30°C · 800', cycleMin: 80, day: 3 },
+];
+
+/** Steps of the laundry flow. `after` = minutes after the previous step is done. */
+export const LAUNDRY_STEPS = [
+  { title: 'Load & start', th: 'ใส่ผ้า ตั้งโปรแกรม แล้วกด Start' },
+  { title: 'Hang to dry', th: 'ตากทันทีที่เครื่องหยุด เว้นระยะ เปิดพัดลม' },
+  { title: 'Collect when dry', th: 'จับดูว่าแห้งสนิท โดยเฉพาะตะเข็บและขอบเอว' },
+  { title: 'Fold & put away', th: 'พับเก็บขึ้นห้อง งานนี้ถึงจะนับว่าเสร็จ' },
+];
+
+export const SMELL_FIX = [
+  'กลิ่นอับมาจากแบคทีเรียที่โตตอนผ้าแห้งช้า น้ำยาปรับผ้านุ่มแค่กลบกลิ่น ไม่ได้แก้ต้นเหตุ',
+  'ซักช่วงสาย แล้วตากช่วงกลางวัน อย่าตากข้ามคืน เพราะอากาศกลางคืนชื้นกว่า ผ้าแห้งช้ากว่า',
+  'ปั่นหมาดให้สูงที่สุดที่ผ้ารับได้ ผ้าจะเหลือน้ำน้อย แห้งเร็วขึ้นมาก',
+  'ตั้ง Delay End ให้เครื่องเสร็จตอนที่คุณพร้อมตาก ไม่ปล่อยผ้าเปียกค้างในถัง',
+  'เปิดพัดลมเป่าราวตากผ้า 2–4 ชม. แขวนให้มีช่องว่างระหว่างตัว',
+  'ผ้าเช็ดตัวและชุดชั้นในใช้ 60°C หรือ 40°C กับผงซักฟอกที่มี oxygen bleach',
+  'ทำ Tub Clean เดือนละครั้ง และแง้มประตูกับลิ้นชักผงซักฟอกไว้หลังซักทุกครั้ง',
+];
+
+export const MACHINE_CARE = [
+  { id: 'tubclean', title: 'Tub Clean', th: 'เลือกโปรแกรม Tub Clean ถังเปล่า ไม่ต้องใส่ผงซักฟอก (ทำเมื่อจอขึ้น tcL ด้วย)', everyDays: 30 },
+  { id: 'filter', title: 'Drain pump filter', th: 'เปิดฝาเล็กมุมล่างขวา วางถาดและผ้ารองน้ำก่อน แล้วค่อยหมุนฟิลเตอร์ออกล้าง', everyDays: 60 },
+  { id: 'gasket', title: 'Door gasket', th: 'เช็ดขอบยางประตูให้แห้ง เอาเศษผ้าออก แง้มประตูทิ้งไว้', everyDays: 7 },
+  { id: 'drawer', title: 'Detergent drawer', th: 'ถอดลิ้นชักผงซักฟอกออกมาล้างคราบ', everyDays: 30 },
+];
