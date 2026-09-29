@@ -19,8 +19,8 @@ ScriptWidget.Fragment = 'Fragment';
 function $gradient(obj) { return 'gradient:' + JSON.stringify(obj); }`;
 
 const SIZES = ['small', 'medium', 'large', 'extraLargePortrait', 'accessoryInline', 'accessoryRectangular', 'accessoryCircular'];
-const STRING_PROPS = ['padding', 'frame', 'font', 'color', 'background', 'shadow', 'alignment', 'linkurl', 'systemName', 'style', 'trackColor', 'spacing', 'corner', 'thickness', 'size'];
-const TAGS = new Set(['vstack', 'hstack', 'zstack', 'text', 'date', 'spacer', 'circle', 'icon', 'progress']);
+const STRING_PROPS = ['padding', 'frame', 'font', 'color', 'background', 'shadow', 'alignment', 'linkurl', 'systemName', 'style', 'trackColor', 'spacing', 'corner', 'thickness', 'size', 'action'];
+const TAGS = new Set(['vstack', 'hstack', 'zstack', 'text', 'date', 'spacer', 'circle', 'icon', 'progress', 'button']);
 const flat = (list) => (list || []).flatMap((c) => (Array.isArray(c) ? flat(c) : c && typeof c === 'object' && c.tag ? [c] : []));
 
 async function run(ms, size, param = '') {
@@ -86,8 +86,10 @@ const moved = await run(new Date('2026-09-29T23:20:00+07:00').getTime(), 'large'
 const txt = JSON.stringify(moved.root);
 if (!txt.includes('ปิดไฟ 00:30')) problems.add('Parameter 00:30 did not move lights-out');
 
-// A tap must open Safari: the Claude app cannot load the app's data.
-if (!/"linkurl":"x-safari-https:\/\/claude\.ai\/artifact\//.test(txt)) problems.add('widget tap does not force Safari');
+// A tap refreshes the widget in place; it must not send him to the Claude app or Safari.
+if (txt.includes('linkurl')) problems.add('widget still opens a link on tap');
+const top = moved.root.children.flat(Infinity).find((c) => c && c.tag);
+if (!top || top.tag !== 'button' || top.props.action !== 'reload') problems.add('widget is not wrapped in a refresh button');
 
 console.log(`widget: ${runs} renders across ${SIZES.length} sizes`);
 if (problems.size) {
