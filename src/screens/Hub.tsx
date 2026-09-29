@@ -332,7 +332,7 @@ function ShopPage(props: { back: () => void }) {
     <div class="screen">
       <PageHead title="Shopping" eyebrow={`${items.filter((i) => i.status === 'need').length} to buy${total ? ` · ~฿${total.toLocaleString()}` : ''}`} onBack={props.back} />
       <Seg id="shop-filter" options={[{ id: 'need', label: 'To buy' }, { id: 'all', label: 'Everything' }]} value={filter} onChange={setFilter} />
-      <div class="banner">ราคาจริงเปลี่ยนทุกวัน ปุ่ม Compare เปิดหน้าค้นหาเรียงราคาถูกสุดใน Shopee/Lazada ส่วนราคาที่ตรวจแล้ว Claude จะอัปเดตให้เมื่อเปิดสิทธิ์เว็บให้ session</div>
+      <div class="banner">ราคาเปลี่ยนทุกวัน และ Shopee/Lazada ปิดกั้นระบบอัตโนมัติด้วย captcha Claude จึงดึงราคาเองไม่ได้ ปุ่ม Shopee ↑฿ และ Lazada ↑฿ เปิดผลค้นหาที่เรียงจากถูกสุดให้ทันที</div>
       {!items.length && <Glass><Empty title="List is loading" /></Glass>}
       {cats.map((c) => (
         <div key={c} class="stack-sm">
