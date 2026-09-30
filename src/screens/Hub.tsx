@@ -13,8 +13,8 @@ import type { HubPage, Nav } from '../lib/nav';
 import { sound } from '../lib/sound';
 import { store } from '../lib/store';
 import { buildDay } from '../lib/schedule';
-import { caffeineCutoff, MIN_NIGHTS, sleepAdvice } from '../lib/sleepcoach';
-import { addDays, fmtHM, fmtShortDate, monthOf, parseHM as parseHMx, relTime, todayKey, wdName, weekday } from '../lib/time';
+import { caffeineCutoff } from '../lib/sleepcoach';
+import { addDays, fmtHM, fmtShortDate, parseHM as parseHMx, relTime, todayKey, wdName, weekday } from '../lib/time';
 import type { DigestItem, ShopItem } from '../lib/types';
 import { buildMetrics, fmtValue, GROUP_LABEL, lastDays, summarize, type Group, type Summary } from '../lib/progress';
 import { saveBackup } from '../lib/backup';
@@ -191,8 +191,8 @@ function InboxPage(props: { alerts: Alert[]; nav: Nav; back: () => void }) {
       />
       <Glass class="list">
         {all.filter((a) => a.kind !== 'digest').length ? all.filter((a) => a.kind !== 'digest').map((a) => (
-          <button key={a.id} class="item" onClick={() => (a.kind === 'sleep' ? props.nav.hub('alarm') : a.kind === 'backup' ? props.nav.hub('stats') : a.task && props.nav.task(a.task))}>
-            <span style={{ color: a.urgent ? 'var(--warn)' : 'var(--ink-3)' }}>{a.kind === 'med' ? I.pill() : a.kind === 'flow' ? I.shirt() : a.kind === 'followup' ? I.user() : a.kind === 'sleep' ? I.moon() : a.kind === 'backup' ? I.download() : I.clock()}</span>
+          <button key={a.id} class="item" onClick={() => (a.kind === 'backup' ? props.nav.hub('stats') : a.task && props.nav.task(a.task))}>
+            <span style={{ color: a.urgent ? 'var(--warn)' : 'var(--ink-3)' }}>{a.kind === 'med' ? I.pill() : a.kind === 'flow' ? I.shirt() : a.kind === 'followup' ? I.user() : a.kind === 'backup' ? I.download() : I.clock()}</span>
             <div class="grow"><div class="t">{a.title}</div>{a.body && <div class="d">{a.body}</div>}</div>
           </button>
         )) : <Empty title="ไม่มีอะไรค้าง" body="ไม่มีงานที่เลยกำหนดหรือรอติดตาม" />}
@@ -623,46 +623,6 @@ function HairlinePage(props: { back: () => void }) {
   );
 }
 
-function SleepCoach() {
-  const s = useStore();
-  const now = useNow(60000);
-  const today = todayKey(now, s.settings.rolloverHour);
-  const a = sleepAdvice((day) => s.logs[monthOf(day)]?.days?.[day], s.settings, today, s.meta.sleepWindowFrom);
-  const h = (m: number) => (m / 60).toFixed(1);
-  const pct = Math.round(a.efficiency * 100);
-  const apply = () => {
-    if (!a.next) return;
-    saveSettings({ lightsOut: a.next });
-    saveMeta({ sleepWindowFrom: today });
-    sound.done();
-    toast(`ปิดไฟ ${a.next} ตั้งแต่คืนนี้`);
-  };
-  const text: Record<typeof a.action, string> = {
-    log: `ตอบ 2 ข้อแรกในเช็คอินทุกเช้า (ใช้เวลากว่าจะหลับ และตื่นกลางดึกรวม) อีก ${Math.max(0, MIN_NIGHTS - a.nights)} คืน แล้วแอปจะบอกว่าควรเลื่อนเวลาปิดไฟหรือไม่`,
-    earlier: `หลับเร็วและหลับยาว ประสิทธิภาพการนอน ${pct}% ร่างกายพร้อมนอนนานขึ้น เลื่อนปิดไฟเร็วขึ้น 15 นาทีเป็น ${a.next} แล้วดูผลอีก ${MIN_NIGHTS} คืน`,
-    keep: `ประสิทธิภาพการนอน ${pct}% คงเวลาเดิมไว้ก่อน จะเลื่อนเร็วขึ้นได้เมื่อหลับภายใน 20 นาที และหลับได้อย่างน้อย 90% ของเวลาบนเตียง`,
-    later: `ใช้เวลาตื่นอยู่บนเตียงรวมเฉลี่ย ${a.latency + a.awake} นาที (ประสิทธิภาพ ${pct}%) เลื่อนปิดไฟช้าลง 15 นาทีเป็น ${a.next} ช่วยให้หลับเร็วและลึกขึ้น พอดีขึ้นแล้วแอปจะพาเลื่อนกลับ`,
-    max: `อยู่บนเตียงครบ 10 ชม. แล้ว ไม่เลื่อนเร็วกว่านี้`,
-  };
-  return (
-    <Glass class="pad stack-sm">
-      <div class="row between">
-        <div class="h3">โค้ชการนอน</div>
-        <span class="tiny num">{a.nights}/7 คืน</span>
-      </div>
-      {a.nights > 0 && (
-        <div class="tiles">
-          <div class="tile" style={{ '--tone': 'var(--a-home)' } as JSX.CSSProperties}><div class="k">กว่าจะหลับ</div><div class="v">{a.latency}<span class="tiny"> นาที</span></div></div>
-          <div class="tile" style={{ '--tone': 'var(--a-personal)' } as JSX.CSSProperties}><div class="k">ตื่นกลางดึก</div><div class="v">{a.awake}<span class="tiny"> นาที</span></div></div>
-          <div class="tile" style={{ '--tone': 'var(--good)' } as JSX.CSSProperties}><div class="k">หลับจริง</div><div class="v">{h(a.asleep)}<span class="tiny"> ชม.</span></div></div>
-        </div>
-      )}
-      <div class="sub">{text[a.action]}</div>
-      {a.next && <button class="btn primary block" onClick={apply}>{I.moon({ size: 18 })} เลื่อนปิดไฟเป็น {a.next}</button>}
-    </Glass>
-  );
-}
-
 function AlarmPage(props: { back: () => void }) {
   const s = useStore();
   const R = s.settings.rolloverHour;
@@ -685,11 +645,11 @@ function AlarmPage(props: { back: () => void }) {
       </Glass>
       <Glass class="pad stack-sm">
         <div class="h3">ช่วงเวลานอนของคุณ</div>
-        <div class="sub">ขึ้นเตียงและปิดไฟ {s.settings.lightsOut} · ตื่น {s.settings.wake} · อยู่บนเตียง {inBed.toFixed(1)} ชม. เป้าหมายหลับจริงราว {(inBed - 0.5).toFixed(1)} ชม. (หักเวลาก่อนหลับราว 15 นาทีและตื่นกลางดึกสั้นๆ) เวลาตื่นที่เท่ากันทุกวันสำคัญกว่าจำนวนชั่วโมง</div>
+        <div class="sub">ขึ้นเตียงและปิดไฟ {s.settings.lightsOut} · ตื่น {s.settings.wake} ทุกวัน · อยู่บนเตียง {inBed.toFixed(1)} ชม.</div>
+        <div class="sub">ไม่มีเครื่องวัดการนอน และการกะเวลาจากความรู้สึกไม่ใช่ข้อมูลจริง แอปจึงไม่เลื่อนเวลาปิดไฟเอง ถ้าอยากให้ปรับจากข้อมูลจริง ต้องมีนาฬิกาหรือแหวนที่วัดการนอน</div>
         <div class="tiny">คาเฟอีนแก้วสุดท้ายก่อน {caffeineCutoff(s.settings)} (12 ชม. ก่อนปิดไฟ)</div>
-        <div class="tiny">เมื่อเลื่อนเวลาปิดไฟ ให้แก้ Bedtime ในแอป Health เป็น {s.settings.lightsOut} ด้วย</div>
+        <div class="tiny">ถ้าแก้เวลาปิดไฟในตั้งค่า ให้แก้ Bedtime ในแอป Health เป็นเวลาเดียวกันด้วย</div>
       </Glass>
-      <SleepCoach />
     </div>
   );
 }

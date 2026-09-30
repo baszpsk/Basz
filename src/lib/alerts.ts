@@ -1,18 +1,17 @@
 // In-app notifications, derived from state: due flow steps, follow-ups,
-// overdue tasks, meds not taken, a sleep-window change the coach suggests,
-// a monthly backup reminder, and new items Claude put into the digests.
+// overdue tasks, meds not taken, a monthly backup reminder, and new items
+// Claude put into the digests.
 
 import { isActionable } from './priority';
 import type { Block } from './schedule';
 import { BACKUP_EVERY_DAYS } from './backup';
-import { sleepAdvice } from './sleepcoach';
 import type { State } from './store';
 import { dueToTs, monthOf } from './time';
 import type { DigestItem, Task } from './types';
 
 export interface Alert {
   id: string;
-  kind: 'flow' | 'followup' | 'overdue' | 'med' | 'sleep' | 'backup' | 'digest';
+  kind: 'flow' | 'followup' | 'overdue' | 'med' | 'backup' | 'digest';
   title: string;
   body?: string;
   task?: Task;
@@ -37,15 +36,6 @@ export function computeAlerts(s: State, now: Date, today: string, blocks: Block[
     for (const it of b.items || []) {
       if (it.kind === 'med' && !checks[it.id]) out.push({ id: 'med-' + today + it.id, kind: 'med', title: `ยังไม่ได้ติ๊ก: ${it.label}`, body: it.hint || b.title, urgent: true });
     }
-  }
-  const sa = sleepAdvice((day) => s.logs[monthOf(day)]?.days?.[day], s.settings, today, s.meta.sleepWindowFrom);
-  if (sa.next) {
-    out.push({
-      id: `sleep-${today}-${sa.next}`,
-      kind: 'sleep',
-      title: sa.action === 'earlier' ? `นอนนานขึ้น: ปิดไฟ ${sa.next}` : `หลับลึกขึ้น: ปิดไฟ ${sa.next}`,
-      body: `จากเช็คอิน ${sa.nights} คืนล่าสุด · แตะเพื่อดูเหตุผลและยืนยัน`,
-    });
   }
   const loggedDays = Object.values(s.logs).reduce((n, m) => n + Object.keys(m.days || {}).length, 0);
   const lastBackup = s.meta.lastBackupAt || 0;

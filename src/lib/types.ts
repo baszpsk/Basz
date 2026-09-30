@@ -72,9 +72,10 @@ export interface Plan {
 
 export interface DayLog {
   checks?: Record<string, number | null>;
-  /** Last night: latency = minutes to fall asleep, awake = minutes awake after that. */
-  sleep?: { bed?: string; wake?: string; quality?: number; latency?: number; awake?: number };
-  symptoms?: { belch?: number; heartburn?: number; energy?: number; mood?: number };
+  /** Last night: refluxWakes = times he woke from heartburn, cough or choking. A count, never a rating. */
+  sleep?: { bed?: string; wake?: string; refluxWakes?: number };
+  /** That day: extraAntacid = antacid or heartburn doses taken on top of the prescribed schedule. */
+  symptoms?: { extraAntacid?: number };
   steps?: number;
   protein?: number;
   nightOut?: boolean;

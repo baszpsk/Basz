@@ -17,8 +17,6 @@ export interface Meta {
   challenge?: { week: string; accepted?: boolean };
   flowDurations?: Record<string, number>;
   onboarded?: boolean;
-  /** Logical day the sleep window last moved; the coach only reads nights after it. */
-  sleepWindowFrom?: string;
   /** When the last backup file was saved. */
   lastBackupAt?: number;
 }

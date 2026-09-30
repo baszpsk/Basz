@@ -12,7 +12,8 @@ export interface Stats {
   breath: { todayMin: number; weekMin: number; totalMin: number; days: DayPoint[] };
   sleep: { streak: number; last14: number };
   meds: { streak: number; adherence14: number };
-  symptoms: { key: string; belch?: number; heartburn?: number }[];
+  /** Morning check-in counts by day: extra antacid doses that day, wakes from reflux that night before. */
+  symptoms: { key: string; extraAntacid?: number; refluxWakes?: number }[];
   tasks: { doneToday: number; doneWeek: number; doneTotal: number };
   checksToday: number;
 }
@@ -48,8 +49,9 @@ export function computeStats(logs: Record<string, MonthLog>, tasks: Record<strin
       const wd = weekday(k);
       const meds = (plan?.meds || []).filter((x) => !x.days || x.days.includes(wd));
       d.medsOk = meds.length > 0 && meds.every((x) => !!dl.checks?.['med-' + x.id]);
-      if (dl.symptoms && (dl.symptoms.belch != null || dl.symptoms.heartburn != null))
-        symptoms.push({ key: k, belch: dl.symptoms.belch, heartburn: dl.symptoms.heartburn });
+      const extraAntacid = dl.symptoms?.extraAntacid;
+      const refluxWakes = dl.sleep?.refluxWakes;
+      if (extraAntacid != null || refluxWakes != null) symptoms.push({ key: k, extraAntacid, refluxWakes });
     }
     for (const f of Object.values(m.focus || {})) {
       if (f.kind !== 'work') continue;

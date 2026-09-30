@@ -363,6 +363,9 @@ export function BodyScreen(props: { nav: Nav }) {
   const sym = stats.symptoms;
   const days30 = Array.from({ length: 30 }, (_, i) => addDays(today, i - 29));
   const symMap = new Map(sym.map((x) => [x.key, x]));
+  // Counts: an even top keeps the middle grid line on a whole number.
+  const symTop = Math.max(2, ...sym.map((x) => Math.max(x.extraAntacid ?? 0, x.refluxWakes ?? 0)));
+  const symMax = symTop + (symTop % 2);
 
   return (
     <div class="screen">
@@ -481,15 +484,16 @@ export function BodyScreen(props: { nav: Nav }) {
             <div class="row between"><div class="h3">อาการ · 30 วัน</div><button class="chip" onClick={props.nav.checkin}>เช็คอิน</button></div>
             {sym.length ? (
               <LineChart
-                title="คะแนนเรอและแสบร้อนกลางอก 0 ถึง 10 ใน 30 วันล่าสุด"
-                max={10}
+                title="จำนวนครั้งที่กินยาลดกรดเพิ่ม และตื่นเพราะแสบร้อน ไอ หรือสำลัก ใน 30 วันล่าสุด"
+                max={symMax}
+                unit="ครั้ง"
                 series={[
-                  { name: 'เรอ', color: 'var(--series-1)', points: days30.map((k) => ({ key: k, value: symMap.get(k)?.belch })) },
-                  { name: 'แสบร้อนกลางอก', color: 'var(--series-2)', points: days30.map((k) => ({ key: k, value: symMap.get(k)?.heartburn })) },
+                  { name: 'ยาลดกรดที่กินเพิ่ม', color: 'var(--series-1)', points: days30.map((k) => ({ key: k, value: symMap.get(k)?.extraAntacid })) },
+                  { name: 'ตื่นเพราะแสบร้อน ไอ สำลัก', color: 'var(--series-2)', points: days30.map((k) => ({ key: k, value: symMap.get(k)?.refluxWakes })) },
                 ]}
               />
             ) : (
-              <Empty title="ยังไม่มีการเช็คอิน" body="เช็คอินทุกคืนก่อนนอน แล้วกราฟแนวโน้มจะขึ้นที่นี่ ใช้คุยกับหมอได้" />
+              <Empty title="ยังไม่มีการเช็คอิน" body="เช็คอินเช้าทุกวัน ในแอปหรือในแชท แล้วกราฟจะขึ้นที่นี่ ใช้คุยกับหมอได้" />
             )}
           </Glass>
 

@@ -169,7 +169,7 @@ function AlertsStrip(props: { alerts: Alert[]; nav: Nav }) {
     <Glass class="list">
       {list.map((a) => (
         <div key={a.id} class="item">
-          <span style={{ color: a.urgent ? 'var(--warn)' : 'var(--ink-2)' }}>{a.kind === 'med' ? I.pill() : a.kind === 'flow' ? I.shirt() : a.kind === 'followup' ? I.user() : a.kind === 'sleep' ? I.moon() : a.kind === 'backup' ? I.download() : I.clock()}</span>
+          <span style={{ color: a.urgent ? 'var(--warn)' : 'var(--ink-2)' }}>{a.kind === 'med' ? I.pill() : a.kind === 'flow' ? I.shirt() : a.kind === 'followup' ? I.user() : a.kind === 'backup' ? I.download() : I.clock()}</span>
           <div class="grow">
             <div class="t">{a.title}</div>
             {a.body && <div class="d">{a.body}</div>}
@@ -181,7 +181,6 @@ function AlertsStrip(props: { alerts: Alert[]; nav: Nav }) {
             </div>
           )}
           {a.task && a.kind !== 'flow' && <button class="btn small" onClick={() => props.nav.task(a.task!)}>เปิด</button>}
-          {a.kind === 'sleep' && <button class="btn small" onClick={() => props.nav.hub('alarm')}>ดู</button>}
           {a.kind === 'backup' && <button class="btn small" onClick={async () => { const r = await saveBackup(); toast(r === 'saved' ? 'บันทึกไฟล์สำรองแล้ว' : r === 'unavailable' ? 'ที่นี่ดาวน์โหลดไฟล์สำรองไม่ได้' : 'ยังไม่ได้บันทึกไฟล์สำรอง'); }}>บันทึก</button>}
         </div>
       ))}
@@ -270,51 +269,67 @@ export function BlockSheet(props: { block: Block | null; d: ReturnType<typeof us
   );
 }
 
-export function CheckinSheet(props: { open: boolean; onClose: () => void }) {
-  const d = useDay();
-  const cur = d.dayLog.symptoms || {};
-  const [belch, setBelch] = useState<number>(cur.belch ?? 3);
-  const [heart, setHeart] = useState<number>(cur.heartburn ?? 1);
-  const [energy, setEnergy] = useState<number>(cur.energy ?? 3);
-  const [sleepQ, setSleepQ] = useState<number>(d.dayLog.sleep?.quality ?? 3);
-  const [lat, setLat] = useState<number | undefined>(d.dayLog.sleep?.latency);
-  const [awk, setAwk] = useState<number | undefined>(d.dayLog.sleep?.awake);
-  const pick = (label: string, opts: [number, string][], v: number | undefined, set: (n: number) => void, id: string) => (
+/** A count answered by tapping 0–5, or typed when it is more. Unanswered stays undefined, never 0. */
+function CountField(props: { id: string; label: string; value: number | undefined; onChange: (n: number | undefined) => void }) {
+  const [other, setOther] = useState(props.value != null && props.value > 5 ? String(props.value) : '');
+  const big = { minWidth: '44px', minHeight: '44px', justifyContent: 'center', fontSize: '16px' } as JSX.CSSProperties;
+  return (
     <div class="field">
-      <label>{label}</label>
-      <div class="chips" id={id} role="radiogroup" aria-label={label}>
-        {opts.map(([m, t]) => (
-          <button key={m} role="radio" aria-checked={v === m} class={`chip ${v === m ? 'on' : ''}`} onClick={() => set(m)}>{t}</button>
-        ))}
+      <label id={props.id + '-label'}>{props.label}</label>
+      <div class="chips" id={props.id} role="radiogroup" aria-labelledby={props.id + '-label'} style={{ flexWrap: 'wrap' }}>
+        {[0, 1, 2, 3, 4, 5].map((n) => {
+          const on = props.value === n && !other;
+          return (
+            <button key={n} role="radio" aria-checked={on} class={`chip num ${on ? 'on' : ''}`} style={big} onClick={() => { setOther(''); props.onChange(n); }}>{n}</button>
+          );
+        })}
+        <input
+          class="input"
+          inputMode="numeric"
+          aria-label={`${props.label} ถ้ามากกว่า 5 ใส่ตัวเลข`}
+          placeholder="อื่น"
+          style={{ width: '72px', flex: '0 0 72px', padding: '10px 12px' }}
+          value={other}
+          onInput={(e) => {
+            const t = (e.target as HTMLInputElement).value.replace(/[^0-9]/g, '');
+            setOther(t);
+            props.onChange(t ? Number(t) : undefined);
+          }}
+        />
       </div>
     </div>
   );
-  const [steps, setSteps] = useState<string>(d.dayLog.steps ? String(d.dayLog.steps) : '');
-  const scale = (label: string, v: number, set: (n: number) => void, max: number, lo: string, hi: string, id: string) => (
-    <div class="field">
-      <label for={id}>{label} <b class="num" style={{ color: 'var(--ink)' }}>{v}</b></label>
-      <input id={id} type="range" min={max === 10 ? 0 : 1} max={max} value={v} onInput={(e) => set(Number((e.target as HTMLInputElement).value))} style={{ width: '100%', accentColor: 'var(--accent)' }} />
-      <div class="row between tiny"><span>{lo}</span><span>{hi}</span></div>
-    </div>
-  );
+}
+
+// The same two counts the morning check-in in chat asks, saved on the same
+// days: extra doses on yesterday's log, last night's wakes on today's.
+export function CheckinSheet(props: { open: boolean; onClose: () => void }) {
+  const d = useDay();
+  const yesterday = addDays(d.today, -1);
+  const yLog = d.prevLog;
+  const [extra, setExtra] = useState<number | undefined>(yLog?.symptoms?.extraAntacid);
+  const [wakes, setWakes] = useState<number | undefined>(d.dayLog.sleep?.refluxWakes);
+  const [steps, setSteps] = useState<string>(yLog?.steps ? String(yLog.steps) : '');
+  const answered = extra != null || wakes != null || !!steps;
   return (
-    <Sheet open={props.open} onClose={props.onClose} title="เช็คอินประจำวัน">
+    <Sheet open={props.open} onClose={props.onClose} title="เช็คอินเช้า">
       <div class="stack">
-        <div class="sub">ให้คะแนนตามความรู้สึกทั้งวัน ใช้ดูแนวโน้มและนำไปคุยกับหมอได้ สองข้อแรกใช้ปรับเวลานอนให้อัตโนมัติ</div>
-        {pick('เมื่อคืนใช้เวลากว่าจะหลับ', [[10, '< 15 นาที'], [22, '15–30'], [45, '30–60'], [75, '> 1 ชม.']], lat, setLat, 'ci-lat')}
-        {pick('ตื่นกลางดึกรวม', [[0, 'แทบไม่ตื่น'], [10, '5–15 นาที'], [22, '15–30'], [45, '30–60'], [75, '> 1 ชม.']], awk, setAwk, 'ci-awake')}
-        {scale('เรอ', belch, setBelch, 10, '0 ไม่มี', '10 ทั้งวัน', 'ci-belch')}
-        {scale('แสบร้อนกลางอก', heart, setHeart, 10, '0 ไม่มี', '10 หนักมาก', 'ci-heart')}
-        {scale('พลังงาน', energy, setEnergy, 5, '1 หมดแรง', '5 สดชื่น', 'ci-energy')}
-        {scale('การนอนเมื่อคืน', sleepQ, setSleepQ, 5, '1 แย่', '5 ดีมาก', 'ci-sleep')}
+        <div class="sub">ใส่เฉพาะตัวเลขที่นับได้จริง ไม่มีการให้คะแนนจากความรู้สึก ข้อไหนจำไม่ได้ให้เว้นไว้ แอปจะไม่เดาแทน</div>
+        <CountField id="ci-extra" label="เมื่อวานกินยาลดกรดหรือยาแก้แสบร้อนเพิ่มนอกตารางยากี่ครั้ง" value={extra} onChange={setExtra} />
+        <CountField id="ci-wakes" label="เมื่อคืนตื่นเพราะแสบร้อน ไอ หรือสำลักกี่ครั้ง" value={wakes} onChange={setWakes} />
         <div class="field">
-          <label for="ci-steps">จำนวนก้าววันนี้ (จากแอป Health ใน iPhone)</label>
+          <label for="ci-steps">ก้าวเดินเมื่อวาน (ตัวเลขจากแอป Health ใน iPhone ไม่ใส่ก็ได้)</label>
           <input id="ci-steps" class="input" inputMode="numeric" placeholder="เช่น 8200" value={steps} onInput={(e) => setSteps((e.target as HTMLInputElement).value.replace(/[^0-9]/g, ''))} />
         </div>
         <button
           class="btn primary block"
+          disabled={!answered}
           onClick={(e) => {
-            patchDay(d.today, { symptoms: { belch, heartburn: heart, energy }, sleep: { quality: sleepQ, latency: lat, awake: awk }, steps: steps ? Number(steps) : undefined, checks: { checkin: Date.now() } });
+            const y: DayLog = {};
+            if (extra != null) y.symptoms = { extraAntacid: extra };
+            if (steps) y.steps = Number(steps);
+            if (y.symptoms || y.steps) patchDay(yesterday, y);
+            patchDay(d.today, { ...(wakes != null ? { sleep: { refluxWakes: wakes } } : {}), checks: { checkin: Date.now() } });
             sound.done();
             burstFrom(e, '');
             props.onClose();
@@ -415,12 +430,12 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
   };
   const routineS = sum('routine');
   const tasksS = sum('tasks');
-  const sleepS = sum('sleep');
+  const wakesS = sum('refluxWakes');
   const allItems = blocks.flatMap((b) => b.items || []);
   const doneItems = allItems.filter((i) => checks[i.id]).length;
   const name = s.plan?.profile?.name || 'Basz';
   const routinePct = allItems.length ? Math.round((doneItems / allItems.length) * 100) : 0;
-  const sleptToday = sleepS?.latest?.key === today;
+  const wakesToday = wakesS?.latest?.key === today;
   const top = ranked.filter((r) => !r.task.flow).slice(0, 3);
   const unread = props.alerts.length;
 
@@ -457,10 +472,10 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
           <div class="v"><CountUp value={tasksS?.latest?.key === today ? tasksS.latest.value : 0} /></div>
           {tasksS?.latest?.key === today && <Delta s={tasksS} today={today} />}
         </div>
-        <button class="tile" style={{ '--tone': 'var(--a-home)', textAlign: 'left', border: 0, color: 'inherit' } as JSX.CSSProperties} onClick={sleptToday ? () => props.nav.hub('stats') : props.nav.checkin}>
-          <div class="k">การนอน</div>
-          <div class="v">{sleptToday ? sleepS!.latest!.value.toFixed(1) : '–'}<span class="tiny"> ชม.</span></div>
-          {sleptToday ? <Delta s={sleepS!} today={today} /> : <div class="tiny">เช็คอินเพื่อบันทึก</div>}
+        <button class="tile" style={{ '--tone': 'var(--a-home)', textAlign: 'left', border: 0, color: 'inherit' } as JSX.CSSProperties} onClick={wakesToday ? () => props.nav.hub('stats') : props.nav.checkin}>
+          <div class="k">ตื่นเพราะแสบร้อน ไอ สำลัก</div>
+          <div class="v">{wakesToday ? wakesS!.latest!.value : '–'}<span class="tiny"> ครั้ง</span></div>
+          {wakesToday ? <Delta s={wakesS!} today={today} /> : <div class="tiny">เช็คอินเช้าเพื่อบันทึก</div>}
         </button>
       </div>
 
