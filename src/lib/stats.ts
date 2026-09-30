@@ -12,8 +12,6 @@ export interface Stats {
   breath: { todayMin: number; weekMin: number; totalMin: number; days: DayPoint[] };
   sleep: { streak: number; last14: number };
   meds: { streak: number; adherence14: number };
-  /** Morning check-in counts by day: extra antacid doses that day, wakes from reflux that night before. */
-  symptoms: { key: string; extraAntacid?: number; refluxWakes?: number }[];
   tasks: { doneToday: number; doneWeek: number; doneTotal: number };
   checksToday: number;
 }
@@ -33,7 +31,6 @@ export function computeStats(logs: Record<string, MonthLog>, tasks: Record<strin
   };
   const byHour = new Array(24).fill(0);
   let pushupBest = 0;
-  const symptoms: Stats['symptoms'] = [];
   const dayOf = (ts: number) => {
     const d = new Date(ts);
     if (d.getHours() < rollover) d.setDate(d.getDate() - 1);
@@ -49,9 +46,6 @@ export function computeStats(logs: Record<string, MonthLog>, tasks: Record<strin
       const wd = weekday(k);
       const meds = (plan?.meds || []).filter((x) => !x.days || x.days.includes(wd));
       d.medsOk = meds.length > 0 && meds.every((x) => !!dl.checks?.['med-' + x.id]);
-      const extraAntacid = dl.symptoms?.extraAntacid;
-      const refluxWakes = dl.sleep?.refluxWakes;
-      if (extraAntacid != null || refluxWakes != null) symptoms.push({ key: k, extraAntacid, refluxWakes });
     }
     for (const f of Object.values(m.focus || {})) {
       if (f.kind !== 'work') continue;
@@ -132,7 +126,6 @@ export function computeStats(logs: Record<string, MonthLog>, tasks: Record<strin
     breath: { todayMin: t?.breath || 0, weekMin: breathWeek, totalMin: totalBreath, days: series(14, (k) => days.get(k)?.breath || 0) },
     sleep: { streak: sleepStreak, last14 },
     meds: { streak: medsStreak, adherence14: meds14 / 14 },
-    symptoms: symptoms.sort((a, b) => (a.key < b.key ? -1 : 1)).slice(-30),
     tasks: { doneToday, doneWeek, doneTotal },
     checksToday: t?.checks || 0,
   };

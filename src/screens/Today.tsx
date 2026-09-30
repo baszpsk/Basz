@@ -97,8 +97,6 @@ function ActionButton(props: { block: Block; nav: Nav; firstTask?: Task }) {
       return <button class="btn primary" onClick={() => n.hub('laundry')}>{I.shirt({ size: 18 })} เริ่มซักผ้า</button>;
     case 'plan':
       return <button class="btn primary" onClick={() => n.plan()}>{I.spark({ size: 18 })} วางแผน</button>;
-    case 'checkin':
-      return <button class="btn" onClick={() => n.checkin()}>{I.stethoscope({ size: 18 })} เช็คอิน</button>;
     default:
       return null;
   }
@@ -269,79 +267,6 @@ export function BlockSheet(props: { block: Block | null; d: ReturnType<typeof us
   );
 }
 
-/** A count answered by tapping 0–5, or typed when it is more. Unanswered stays undefined, never 0. */
-function CountField(props: { id: string; label: string; value: number | undefined; onChange: (n: number | undefined) => void }) {
-  const [other, setOther] = useState(props.value != null && props.value > 5 ? String(props.value) : '');
-  const big = { minWidth: '44px', minHeight: '44px', justifyContent: 'center', fontSize: '16px' } as JSX.CSSProperties;
-  return (
-    <div class="field">
-      <label id={props.id + '-label'}>{props.label}</label>
-      <div class="chips" id={props.id} role="radiogroup" aria-labelledby={props.id + '-label'} style={{ flexWrap: 'wrap' }}>
-        {[0, 1, 2, 3, 4, 5].map((n) => {
-          const on = props.value === n && !other;
-          return (
-            <button key={n} role="radio" aria-checked={on} class={`chip num ${on ? 'on' : ''}`} style={big} onClick={() => { setOther(''); props.onChange(n); }}>{n}</button>
-          );
-        })}
-        <input
-          class="input"
-          inputMode="numeric"
-          aria-label={`${props.label} ถ้ามากกว่า 5 ใส่ตัวเลข`}
-          placeholder="อื่น"
-          style={{ width: '72px', flex: '0 0 72px', padding: '10px 12px' }}
-          value={other}
-          onInput={(e) => {
-            const t = (e.target as HTMLInputElement).value.replace(/[^0-9]/g, '');
-            setOther(t);
-            props.onChange(t ? Number(t) : undefined);
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-// The same two counts the morning check-in in chat asks, saved on the same
-// days: extra doses on yesterday's log, last night's wakes on today's.
-export function CheckinSheet(props: { open: boolean; onClose: () => void }) {
-  const d = useDay();
-  const yesterday = addDays(d.today, -1);
-  const yLog = d.prevLog;
-  const [extra, setExtra] = useState<number | undefined>(yLog?.symptoms?.extraAntacid);
-  const [wakes, setWakes] = useState<number | undefined>(d.dayLog.sleep?.refluxWakes);
-  const [steps, setSteps] = useState<string>(yLog?.steps ? String(yLog.steps) : '');
-  const answered = extra != null || wakes != null || !!steps;
-  return (
-    <Sheet open={props.open} onClose={props.onClose} title="เช็คอินเช้า">
-      <div class="stack">
-        <div class="sub">ใส่เฉพาะตัวเลขที่นับได้จริง ไม่มีการให้คะแนนจากความรู้สึก ข้อไหนจำไม่ได้ให้เว้นไว้ แอปจะไม่เดาแทน</div>
-        <CountField id="ci-extra" label="เมื่อวานกินยาลดกรดหรือยาแก้แสบร้อนเพิ่มนอกตารางยากี่ครั้ง" value={extra} onChange={setExtra} />
-        <CountField id="ci-wakes" label="เมื่อคืนตื่นเพราะแสบร้อน ไอ หรือสำลักกี่ครั้ง" value={wakes} onChange={setWakes} />
-        <div class="field">
-          <label for="ci-steps">ก้าวเดินเมื่อวาน (ตัวเลขจากแอป Health ใน iPhone ไม่ใส่ก็ได้)</label>
-          <input id="ci-steps" class="input" inputMode="numeric" placeholder="เช่น 8200" value={steps} onInput={(e) => setSteps((e.target as HTMLInputElement).value.replace(/[^0-9]/g, ''))} />
-        </div>
-        <button
-          class="btn primary block"
-          disabled={!answered}
-          onClick={(e) => {
-            const y: DayLog = {};
-            if (extra != null) y.symptoms = { extraAntacid: extra };
-            if (steps) y.steps = Number(steps);
-            if (y.symptoms || y.steps) patchDay(yesterday, y);
-            patchDay(d.today, { ...(wakes != null ? { sleep: { refluxWakes: wakes } } : {}), checks: { checkin: Date.now() } });
-            sound.done();
-            burstFrom(e, '');
-            props.onClose();
-          }}
-        >
-          บันทึกเช็คอิน
-        </button>
-      </div>
-    </Sheet>
-  );
-}
-
 export function PlanSheet(props: { open: boolean; onClose: () => void }) {
   const d = useDay();
   const tomorrow = addDays(d.today, 1);
@@ -430,12 +355,12 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
   };
   const routineS = sum('routine');
   const tasksS = sum('tasks');
-  const wakesS = sum('refluxWakes');
+  // Tonight's lights-out has not happened yet, so count the 7 complete nights up to last night.
+  const lights7 = metrics.find((x) => x.id === 'lightsout')?.values.get(addDays(today, -1));
   const allItems = blocks.flatMap((b) => b.items || []);
   const doneItems = allItems.filter((i) => checks[i.id]).length;
   const name = s.plan?.profile?.name || 'Basz';
   const routinePct = allItems.length ? Math.round((doneItems / allItems.length) * 100) : 0;
-  const wakesToday = wakesS?.latest?.key === today;
   const top = ranked.filter((r) => !r.task.flow).slice(0, 3);
   const unread = props.alerts.length;
 
@@ -472,10 +397,10 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
           <div class="v"><CountUp value={tasksS?.latest?.key === today ? tasksS.latest.value : 0} /></div>
           {tasksS?.latest?.key === today && <Delta s={tasksS} today={today} />}
         </div>
-        <button class="tile" style={{ '--tone': 'var(--a-home)', textAlign: 'left', border: 0, color: 'inherit' } as JSX.CSSProperties} onClick={wakesToday ? () => props.nav.hub('stats') : props.nav.checkin}>
-          <div class="k">ตื่นเพราะแสบร้อน ไอ สำลัก</div>
-          <div class="v">{wakesToday ? wakesS!.latest!.value : '–'}<span class="tiny"> ครั้ง</span></div>
-          {wakesToday ? <Delta s={wakesS!} today={today} /> : <div class="tiny">เช็คอินเช้าเพื่อบันทึก</div>}
+        <button class="tile" style={{ '--tone': 'var(--a-home)', textAlign: 'left', border: 0, color: 'inherit' } as JSX.CSSProperties} onClick={() => props.nav.hub('stats')}>
+          <div class="k">ปิดไฟตรงเวลา</div>
+          <div class="v">{lights7 ?? '–'}<span class="tiny">/7 คืน</span></div>
+          <div class="tiny">7 คืนล่าสุด ถึงเมื่อคืน</div>
         </button>
       </div>
 
@@ -500,7 +425,6 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
         >
           {I.moon({ size: 14 })} {dayLog.nightOut ? 'คืนนี้ไปเที่ยว' : 'คืนนี้ออกไปเที่ยวไหม?'}
         </button>
-        <button class="chip" onClick={props.nav.checkin}>{I.stethoscope({ size: 14 })} เช็คอิน</button>
       </div>
 
       <BlockSheet block={openBlock} d={d} nav={props.nav} onClose={() => setOpenBlock(null)} />

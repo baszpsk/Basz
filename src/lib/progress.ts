@@ -94,14 +94,11 @@ export function buildMetrics(
   const routine = metric('routine', 'Day', 'กิจวัตรที่ทำ', '%', 'up', 'var(--good)');
   const tasksDone = metric('tasks', 'Day', 'งานที่เสร็จ', '', 'up', 'var(--accent)');
   const meds = metric('meds', 'Health', 'กินยาครบ', '%', 'up', 'var(--a-growth)');
-  const wakes = metric('refluxWakes', 'Sleep', 'ตื่นเพราะแสบร้อน ไอ หรือสำลัก', 'ครั้ง', 'down', 'var(--a-home)');
   const onTime = metric('lightsout', 'Sleep', 'ปิดไฟตรงเวลา 7 วันล่าสุด', 'คืน', 'up', 'var(--a-home)');
   const wk7 = metric('workouts', 'Body', 'ออกกำลังกาย 7 วันล่าสุด', 'ครั้ง', 'up', 'var(--a-health)');
   const push = metric('pushup', 'Body', 'วิดพื้นเซ็ตที่ดีที่สุด', 'ครั้ง', 'up', 'var(--a-health)');
   const reps = metric('reps', 'Body', 'จำนวนครั้งรวมที่ออกกำลัง', 'ครั้ง', 'up', 'var(--a-health)');
   const breath = metric('breath', 'Body', 'หายใจท้อง', 'นาที', 'up', 'var(--a-health)');
-  const steps = metric('steps', 'Body', 'ก้าวเดิน', 'ก้าว', 'up', 'var(--a-health)');
-  const extra = metric('extraAntacid', 'Health', 'ยาลดกรดที่กินเพิ่มนอกตาราง', 'ครั้ง', 'down', 'var(--a-personal)');
   const sales = metric('sales', 'Seoulful', 'ยอดขายที่รายงาน', '฿', 'up', 'var(--a-seoulful)');
   const rating = metric('rating', 'Seoulful', 'ดาวรีวิว', '★', 'up', 'var(--a-seoulful)', 1);
 
@@ -114,10 +111,6 @@ export function buildMetrics(
       if (items.length) routine.values.set(k, Math.round((items.filter((i) => checks[i.id]).length / items.length) * 100));
       const medItems = items.filter((i) => i.kind === 'med');
       if (medItems.length) meds.values.set(k, Math.round((medItems.filter((i) => checks[i.id]).length / medItems.length) * 100));
-      // Answered counts only: a day he did not answer stays empty, never 0.
-      if (dl.sleep?.refluxWakes != null) wakes.values.set(k, dl.sleep.refluxWakes);
-      if (dl.symptoms?.extraAntacid != null) extra.values.set(k, dl.symptoms.extraAntacid);
-      if (dl.steps) steps.values.set(k, dl.steps);
     }
     if (a?.breath) breath.values.set(k, Math.round(a.breath));
     if (a?.workouts) reps.values.set(k, a.reps);
@@ -158,7 +151,7 @@ export function buildMetrics(
     const n = Object.values(tasks).filter((t) => t.status === 'done' && t.doneAt && dayOf(t.doneAt) === yesterday && t.doneAt <= cutoff).length;
     tasksDone.pace = { key: yesterday, value: n, at: clock };
   }
-  return [routine, tasksDone, wakes, onTime, wk7, push, reps, breath, steps, meds, extra, sales, rating];
+  return [routine, tasksDone, onTime, wk7, push, reps, breath, meds, sales, rating];
 }
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : undefined);

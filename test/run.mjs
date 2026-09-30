@@ -29,7 +29,7 @@ for (let i = 1; i <= 20; i++) {
   const k = key(d);
   const m = k.slice(0, 7);
   months[m] ||= { month: m, days: {}, focus: {}, workouts: {}, breath: {} };
-  months[m].days[k] = { checks: { 'lights-out': i % 3 ? Date.now() : null, water: Date.now() }, symptoms: { extraAntacid: i % 4 ? 0 : 1 }, sleep: { refluxWakes: i % 6 ? 0 : 1 } };
+  months[m].days[k] = { checks: { 'lights-out': i % 3 ? Date.now() : null, water: Date.now() } };
   months[m].breath['b' + i] = { start: d.getTime(), minutes: 10 + (i % 4) * 5, preset: 'daily' };
   if (i % 2) months[m].workouts['w' + i] = { start: d.getTime(), end: d.getTime() + 2700000, program: 'A', exercises: { pushup: [{ reps: 12 + (i % 4), level: 3 }] } };
 }
@@ -89,28 +89,9 @@ await page.click('.sheet button:has-text("เพิ่มงาน")');
 await page.waitForTimeout(300);
 await check(page.evaluate(() => [...window.__docs.keys()].some((k) => k.startsWith('tasks/') && window.__docs.get(k).title.includes('ซัพพลายเออร์กิมจิ'))), 'new task saved to db');
 
-// morning check-in asks counts only: yesterday's extra doses and steps, last night's reflux wakes
-await page.click('.screen .chip:has-text("เช็คอิน")');
-await page.waitForSelector('#ci-extra');
-await check(page.evaluate(() => !document.querySelector('.sheet input[type=range]')), 'check-in has no rating sliders');
-await check(page.locator('#ci-extra .chip.on').innerText().then((t) => t.trim() === '0'), 'check-in shows the count already recorded for yesterday');
-await page.fill('#ci-extra input', '12');
-await page.click('#ci-wakes .chip:has-text("0")');
-await page.fill('#ci-steps', '8200');
-await page.screenshot({ path: 'test/out/03b-checkin.png' });
-await page.click('button:has-text("บันทึกเช็คอิน")');
-await page.waitForTimeout(300);
-await check(page.evaluate(() => {
-  const days = Object.assign({}, ...[...window.__docs.entries()].filter(([k]) => k.startsWith('logs/')).map(([, v]) => v.days || {}));
-  const y = Object.keys(days).find((k) => days[k].symptoms?.extraAntacid === 12 && days[k].steps === 8200);
-  const t = Object.keys(days).find((k) => days[k].sleep?.refluxWakes === 0 && days[k].checks?.checkin);
-  if (!y || !t) return false;
-  const d = new Date(y + 'T12:00:00');
-  d.setDate(d.getDate() + 1);
-  const p = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` === t;
-}), 'check-in saves extra doses and steps on yesterday, reflux wakes on today');
-await check(page.locator('.tile:has-text("ตื่นเพราะแสบร้อน") .v').innerText().then((t) => t.trim().startsWith('0')), 'today tile shows last night\'s reflux wakes');
+// no daily check-in: nothing asks for ratings or counts
+await check(page.evaluate(() => !document.body.textContent.includes('เช็คอิน')), 'today has no check-in');
+await check(page.locator('.tile:has-text("ปิดไฟตรงเวลา")').count().then((n) => n === 1), 'today tile shows lights-out on time');
 
 // Tasks tab
 await page.click('.tab:has-text("งาน")');
@@ -186,7 +167,7 @@ for (const [name, label] of HUB) {
   await noOverflow(page, 'hub ' + name);
   if (name === 'progress') {
     const txt = await page.locator('.screen').last().innerText();
-    await check(txt.includes('วิดพื้นเซ็ตที่ดีที่สุด') && txt.includes('ยาลดกรดที่กินเพิ่ม') && !/คุณภาพการนอน|พลังงาน|\/10|\/5/.test(txt) && /เทียบ(เมื่อวาน|วันก่อนหน้า| \d)/.test(txt), 'progress compares metrics with their last value');
+    await check(txt.includes('วิดพื้นเซ็ตที่ดีที่สุด') && txt.includes('กินยาครบ') && !/คุณภาพการนอน|พลังงาน|ยาลดกรดที่กินเพิ่ม|\/10|\/5/.test(txt) && /เทียบ(เมื่อวาน|วันก่อนหน้า| \d)/.test(txt), 'progress compares metrics with their last value');
     await check(!/\bXP\b|Level \d|เลเวล/.test(txt), 'progress has no XP or levels');
     await page.click('.item:has-text("วิดพื้นเซ็ตที่ดีที่สุด")');
     await page.waitForTimeout(300);

@@ -11,7 +11,7 @@ import type { Task } from './lib/types';
 import { BodyScreen, BreathSheet, WorkoutSheet } from './screens/Body';
 import { HubScreen } from './screens/Hub';
 import { AddSheet, TaskSheet, TasksScreen } from './screens/Tasks';
-import { CheckinSheet, PlanSheet, TodayScreen, useDay } from './screens/Today';
+import { PlanSheet, TodayScreen, useDay } from './screens/Today';
 
 const TABS: { id: TabId; label: string; icon: (p?: { size?: number }) => JSX.Element }[] = [
   { id: 'today', label: 'วันนี้', icon: I.today },
@@ -62,7 +62,6 @@ function Shell() {
   const [task, setTask] = useState<Task | null>(null);
   const [workout, setWorkout] = useState<string | null>(null);
   const [breath, setBreath] = useState<string | null>(null);
-  const [checkin, setCheckin] = useState(false);
   const [plan, setPlan] = useState(false);
   const d = useDay();
 
@@ -96,7 +95,6 @@ function Shell() {
         setHubPage('inbox');
         setTabRaw('hub');
       },
-      checkin: () => setCheckin(true),
       plan: () => setPlan(true),
     }),
     [tab],
@@ -130,7 +128,6 @@ function Shell() {
       <TaskSheet task={task} onClose={() => setTask(null)} nav={nav} />
       <WorkoutSheet programId={workout} onClose={() => setWorkout(null)} />
       <BreathSheet presetId={breath} onClose={() => setBreath(null)} />
-      <CheckinSheet open={checkin} onClose={() => setCheckin(false)} key={checkin ? 'ci-open' : 'ci'} />
       <PlanSheet open={plan} onClose={() => setPlan(false)} key={plan ? 'pl-open' : 'pl'} />
       <ToastHost />
     </div>

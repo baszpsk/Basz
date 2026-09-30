@@ -10,7 +10,7 @@ import type { Area, DayLog, Med, Plan, Settings } from './types';
 
 export interface CheckItem { id: string; label: string; hint?: string; kind: 'med' | 'habit' | 'food' | 'care' | 'trade' | 'home' }
 export type BlockKind = 'wake' | 'trade' | 'meal' | 'work' | 'move' | 'break' | 'evening' | 'wind' | 'sleep' | 'home' | 'review';
-export type BlockAction = 'focus' | 'workout' | 'breath' | 'walk' | 'laundry' | 'plan' | 'checkin';
+export type BlockAction = 'focus' | 'workout' | 'breath' | 'walk' | 'laundry' | 'plan';
 
 export interface Block {
   id: string;
@@ -63,7 +63,6 @@ export function buildDay(key: string, st: Settings, plan: Plan | null, log?: Day
   const fresh: CheckItem[] = [
     { id: 'light', label: 'รับแสงแดด 5–10 นาที', hint: 'เปิดม่านหรือออกไปรับแสงจริง ช่วยตั้งนาฬิกาชีวิต', kind: 'habit' },
     { id: 'skin-am', label: 'ล้างหน้า + ทากันแดด', hint: 'คลีนเซอร์อ่อน → มอยส์เจอไรเซอร์ → กันแดดยาว 2 นิ้ว', kind: 'care' },
-    { id: 'checkin', label: 'เช็คอินเช้า 2 ตัวเลข', hint: 'ยาลดกรดที่กินเพิ่มเมื่อวาน · ตื่นเพราะแสบร้อน ไอ หรือสำลักเมื่อคืน ตอบในแอปหรือในแชทก็ได้', kind: 'habit' },
   ];
   add({
     id: 'wake',
@@ -73,7 +72,6 @@ export function buildDay(key: string, st: Settings, plan: Plan | null, log?: Day
     title: recovery ? 'เช้าพักฟื้น' : 'ตื่นนอน',
     sub: recovery ? 'ตื่นไม่เกิน 13:00 · รับแสงแดดทันที · ห้ามงีบหลัง 16:00' : squeeze ? 'ยา · น้ำ · เปิดแผนเทรดที่ทำไว้' : 'ยา · น้ำ · แสงแดด · กันแดด',
     area: 'health',
-    action: squeeze ? undefined : 'checkin',
     items: [
       { id: 'water', label: 'ดื่มน้ำ 1 แก้ว', hint: 'น้ำเปล่า 1 แก้ว จิบช้าๆ ไม่ดื่มรวดเดียว', kind: 'habit' },
       ...(squeeze ? [] : fresh),
@@ -93,11 +91,8 @@ export function buildDay(key: string, st: Settings, plan: Plan | null, log?: Day
     if (squeeze) {
       const fs = parseHM('10:20', R);
       const fe = Math.min(M1, fs + 15);
-      if (fe - fs >= 5) add({ id: 'fresh', start: fs, end: fe, kind: 'wake', area: 'health', title: 'เริ่มวันให้สดชื่น', sub: 'รับแสงจริง 5–10 นาที · ล้างหน้า + กันแดด · เช็คอินเช้า', action: 'checkin', items: fresh });
-      else {
-        out[0].items = [...(out[0].items || []), ...fresh];
-        out[0].action = 'checkin';
-      }
+      if (fe - fs >= 5) add({ id: 'fresh', start: fs, end: fe, kind: 'wake', area: 'health', title: 'เริ่มวันให้สดชื่น', sub: 'รับแสงจริง 5–10 นาที · ล้างหน้า + กันแดด', items: fresh });
+      else out[0].items = [...(out[0].items || []), ...fresh];
     }
   } else {
     add({ id: 'slow', start: W + 20, end: M1, kind: 'break', title: 'เช้าสบายๆ', sub: 'ตลาดปิด · เวลาของคุณเอง' });

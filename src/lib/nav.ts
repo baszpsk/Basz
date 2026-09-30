@@ -11,6 +11,5 @@ export interface Nav {
   breath: (presetId?: string) => void;
   hub: (page: HubPage) => void;
   inbox: () => void;
-  checkin: () => void;
   plan: () => void;
 }
