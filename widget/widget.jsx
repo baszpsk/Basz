@@ -1,6 +1,6 @@
 // Basz OS on the Home Screen and Lock Screen, for the ScriptWidget app.
-// widget/build.mjs puts two things above this file: BASZ (settings,
-// medicines and the app link) and BaszEngine (the app's own day builder),
+// widget/build.mjs puts two things above this file: BASZ (settings
+// and medicines) and BaszEngine (the app's own day builder),
 // so the widget shows exactly the blocks and times the app shows.
 //
 // The widget cannot read the app's database, so it shows the plan, not ticks.

@@ -1,5 +1,5 @@
 // Packs the Home Screen widget for the ScriptWidget app (a .swt file is a ZIP
-// holding widget.json and main.jsx). Personal data (medicines, the app link)
+// holding widget.json and main.jsx). Personal data (medicines)
 // comes from seed/private, so the output stays in the git-ignored dist/.
 //
 //   node widget/build.mjs [--settings path/to/settings.json]
@@ -9,7 +9,6 @@ import { crc32, deflateRawSync } from 'node:zlib';
 
 const NAME = 'Basz OS';
 const OUT = 'dist/widget';
-const APP_URL = 'https://claude.ai/artifact/VtWJjQF6u8qCqGeix4nWPS';
 
 const arg = (flag) => {
   const i = process.argv.indexOf(flag);
@@ -33,7 +32,7 @@ const engine = await build({
 });
 
 const built = new Date().toISOString().slice(0, 10);
-const data = { built, app: APP_URL, settings, meds: meds.map(({ id, time, name, days }) => ({ id, time, name, ...(days ? { days } : {}) })) };
+const data = { built, settings, meds: meds.map(({ id, time, name, days }) => ({ id, time, name, ...(days ? { days } : {}) })) };
 const main = [
   `// ${NAME} widget · built ${built} from github.com/baszpsk/basz (widget/)`,
   `const BASZ = ${JSON.stringify(data)};`,
