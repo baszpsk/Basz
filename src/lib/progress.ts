@@ -45,7 +45,7 @@ export interface Summary {
   vsLabel?: string;
 }
 
-interface DayAgg { breath: number; workouts: number; reps: number; pushupMax: number; tasks: number }
+interface DayAgg { breath: number; workouts: number; reps: number; pushupMax: number; tasks: number; pomos: number; focusSec: number }
 
 export function buildMetrics(
   logs: Record<string, MonthLog>,
@@ -66,11 +66,24 @@ export function buildMetrics(
   const agg = new Map<string, DayAgg>();
   const at = (k: string) => {
     let a = agg.get(k);
-    if (!a) agg.set(k, (a = { breath: 0, workouts: 0, reps: 0, pushupMax: 0, tasks: 0 }));
+    if (!a) agg.set(k, (a = { breath: 0, workouts: 0, reps: 0, pushupMax: 0, tasks: 0, pomos: 0, focusSec: 0 }));
     return a;
   };
+  // Pomodoro focus rounds: full ones count, and every counted second adds to focus time.
+  const focusRounds: { day: string; end: number; full: boolean; sec: number }[] = [];
+  let firstFocus: string | undefined;
   for (const m of Object.values(logs)) {
     for (const [k, dl] of Object.entries(m.days || {})) dayLogs.set(k, dl);
+    for (const f of Object.values(m.focus || {})) {
+      if (f.kind !== 'work') continue;
+      const day = dayOf(f.start);
+      const r = { day, end: f.end, full: f.completed !== false, sec: f.activeSec ?? f.minutes * 60 };
+      focusRounds.push(r);
+      const a = at(day);
+      if (r.full) a.pomos += 1;
+      a.focusSec += r.sec;
+      if (!firstFocus || day < firstFocus) firstFocus = day;
+    }
     for (const b of Object.values(m.breath || {})) at(dayOf(b.start)).breath += b.minutes;
     for (const w of Object.values(m.workouts || {})) {
       const a = at(dayOf(w.start));
@@ -93,6 +106,8 @@ export function buildMetrics(
   const metric = (id: string, group: Group, label: string, unit: string, better: 'up' | 'down', tone: string, decimals = 0): Metric => ({ id, group, label, unit, better, tone, decimals, values: new Map() });
   const routine = metric('routine', 'Day', 'กิจวัตรที่ทำ', '%', 'up', 'var(--good)');
   const tasksDone = metric('tasks', 'Day', 'งานที่เสร็จ', '', 'up', 'var(--accent)');
+  const pomos = metric('pomodoros', 'Day', 'ปอมโมโดโรที่ครบ', 'รอบ', 'up', 'var(--accent)');
+  const focusMin = metric('focusmin', 'Day', 'เวลาโฟกัส', 'นาที', 'up', 'var(--accent)');
   const meds = metric('meds', 'Health', 'กินยาครบ', '%', 'up', 'var(--a-growth)');
   const onTime = metric('lightsout', 'Sleep', 'ปิดไฟตรงเวลา 7 วันล่าสุด', 'คืน', 'up', 'var(--a-home)');
   const wk7 = metric('workouts', 'Body', 'ออกกำลังกาย 7 วันล่าสุด', 'ครั้ง', 'up', 'var(--a-health)');
@@ -117,6 +132,11 @@ export function buildMetrics(
     if (a?.pushupMax) push.values.set(k, a.pushupMax);
     // Counts and rolling windows are real zeros on every day since the first record.
     tasksDone.values.set(k, a?.tasks || 0);
+    // Zero is real only once he has started using the timer.
+    if (firstFocus && k >= firstFocus) {
+      pomos.values.set(k, a?.pomos || 0);
+      focusMin.values.set(k, Math.round((a?.focusSec || 0) / 60));
+    }
     let w = 0;
     let n = 0;
     for (let i = 0; i < 7; i++) {
@@ -151,7 +171,12 @@ export function buildMetrics(
     const n = Object.values(tasks).filter((t) => t.status === 'done' && t.doneAt && dayOf(t.doneAt) === yesterday && t.doneAt <= cutoff).length;
     tasksDone.pace = { key: yesterday, value: n, at: clock };
   }
-  return [routine, tasksDone, onTime, wk7, push, reps, breath, meds, sales, rating];
+  if (pomos.values.has(yesterday)) {
+    const y = focusRounds.filter((r) => r.day === yesterday && r.end <= cutoff);
+    pomos.pace = { key: yesterday, value: y.filter((r) => r.full).length, at: clock };
+    focusMin.pace = { key: yesterday, value: Math.round(y.reduce((s, r) => s + r.sec, 0) / 60), at: clock };
+  }
+  return [routine, tasksDone, pomos, focusMin, onTime, wk7, push, reps, breath, meds, sales, rating];
 }
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : undefined);

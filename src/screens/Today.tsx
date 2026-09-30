@@ -86,7 +86,12 @@ function ActionButton(props: { block: Block; nav: Nav; firstTask?: Task }) {
   const n = props.nav;
   switch (b.action) {
     case 'focus':
-      return props.firstTask ? <button class="btn primary" onClick={() => n.task(props.firstTask!)}>{I.arrow({ size: 18 })} เปิดงาน</button> : null;
+      return (
+        <>
+          <button class="btn primary" onClick={() => n.focus(props.firstTask, true)}>{I.play({ size: 18 })} เริ่มโฟกัส 25/5</button>
+          {props.firstTask && <button class="btn" onClick={() => n.task(props.firstTask!)}>{I.arrow({ size: 18 })} เปิดงาน</button>}
+        </>
+      );
     case 'workout':
       return <button class="btn primary" onClick={() => n.workout(b.program || 'A')}>{I.play({ size: 18 })} เริ่ม{b.title}</button>;
     case 'breath':
@@ -416,6 +421,7 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
       <Timeline d={d} onOpen={setOpenBlock} />
 
       <div class="row wrap" style={{ gap: '8px', justifyContent: 'center' }}>
+        <button class="chip" onClick={() => props.nav.focus()}>{I.focus({ size: 14 })} โฟกัส 25/5</button>
         <button
           class={`chip ${dayLog.nightOut ? 'on' : ''}`}
           onClick={() => {

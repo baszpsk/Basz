@@ -8,6 +8,20 @@ import { I } from './icons';
 
 export const toneOf = (a?: Area) => (a ? `var(--a-${a})` : 'var(--accent)');
 
+export function PageHead(props: { title: string; eyebrow?: string; onBack: () => void; right?: ComponentChildren }) {
+  return (
+    <div class="topbar">
+      <button class="icon-btn" aria-label="กลับ" onClick={props.onBack}>{I.back({ size: 20 })}</button>
+      <div class="grow">
+        {props.eyebrow && <div class="eyebrow">{props.eyebrow}</div>}
+        <h1 class="h1" style={{ fontSize: '22px' }}>{props.title}</h1>
+      </div>
+      {props.right}
+    </div>
+  );
+}
+
+
 export function Glass(props: { class?: string; children?: ComponentChildren; tone?: string; style?: JSX.CSSProperties; onClick?: () => void }) {
   const style = { ...(props.style || {}), ...(props.tone ? { '--tone': props.tone } : {}) } as JSX.CSSProperties;
   return (

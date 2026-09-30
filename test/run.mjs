@@ -38,7 +38,7 @@ seed['digests/' + key(now)] = { date: key(now), items: { e1: { id: 'e1', kind: '
 
 const browser = await chromium.launch();
 const problems = [];
-async function openPage(scheme, width = 430, height = 932, noDb = false) {
+async function openPage(scheme, width = 430, height = 932, noDb = false, clock = false) {
   const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 2, colorScheme: scheme, hasTouch: true, isMobile: true });
   const page = await ctx.newPage();
   page.on('console', (m) => m.type() === 'error' && problems.push(`[console ${scheme}] ${m.text()}`));
@@ -52,6 +52,7 @@ async function openPage(scheme, width = 430, height = 932, noDb = false) {
   await page.route('https://fonts.gstatic.com/**', (r) => r.abort());
   await page.route('https://artifact.test/**', (r) => r.fulfill({ contentType: 'text/html', body: skeleton(html) }));
   await page.addInitScript(`window.__NO_DB__ = ${noDb};\nwindow.__SEED__ = ${JSON.stringify(seed)};\n${mock}`);
+  if (clock) await page.clock.install();
   await page.goto('https://artifact.test/');
   await page.waitForSelector(noDb ? '#no-storage' : '.tabbar');
   await page.waitForTimeout(400);
@@ -161,7 +162,7 @@ await page.waitForTimeout(200);
 await page.screenshot({ path: 'test/out/11-hub.png', fullPage: true });
 const HUB = [['seoulful', 'Seoulful'], ['markets', 'หุ้น'], ['inbox', 'แจ้งเตือน'], ['laundry', 'ซักผ้า'], ['shopping', 'ของที่ต้องซื้อ'], ['progress', 'สถิติ'], ['askclaude', 'ถาม Claude'], ['hairline', 'ไรผม'], ['alarm', 'ปลุกและการนอน'], ['settings', 'ตั้งค่า']];
 for (const [name, label] of HUB) {
-  await page.click(`.hubtile:has-text("${label}")`);
+  await page.click(`.hubtile:has(.h3:text-is("${label}"))`);
   await page.waitForTimeout(250);
   await page.screenshot({ path: `test/out/hub-${name}.png`, fullPage: true });
   await noOverflow(page, 'hub ' + name);
@@ -198,6 +199,53 @@ for (const [name, label] of HUB) {
   }
   await page.click('.icon-btn[aria-label="กลับ"]');
   await page.waitForTimeout(150);
+}
+
+// Pomodoro 25/5 with a controllable clock: a full round with one pause, the rest, then an early stop
+{
+  const { page: pp } = await openPage('light', 390, 844, false, true);
+  const pomo = () => pp.evaluate(() => window.__docs.get('cfg/meta')?.pomo || null);
+  const rounds = () => pp.evaluate(() => [...window.__docs.entries()].filter(([k]) => k.startsWith('logs/')).flatMap(([, v]) => Object.entries(v.focus || {}).map(([id, f]) => ({ id, ...f }))));
+  await pp.click('.screen .chip:has-text("โฟกัส 25/5")');
+  await pp.waitForSelector('#pomo-start');
+  await pp.screenshot({ path: 'test/out/30-pomodoro-idle.png' });
+  await pp.click('#pomo-start');
+  await pp.waitForTimeout(300);
+  await check(pomo().then((p) => p?.phase === 'work' && p.running && p.plannedSec === 1500), 'pomodoro starts a 25-minute focus round');
+  await pp.clock.fastForward('05:00');
+  await pp.click('#pomo-pause');
+  await pp.waitForTimeout(200);
+  await check(pomo().then((p) => p && !p.running && p.pauses.length === 1), 'pause is recorded');
+  await pp.clock.fastForward('02:00');
+  await pp.click('#pomo-resume');
+  await pp.waitForTimeout(200);
+  await pp.screenshot({ path: 'test/out/31-pomodoro-running.png' });
+  await pp.clock.fastForward('20:30');
+  await pp.waitForTimeout(300);
+  await check(rounds().then((r) => r.some((x) => x.kind === 'work' && x.completed === true && x.activeSec === 1500 && x.pauses?.length === 1 && x.pausedSec === 120 && x.endedBy === 'timer')), 'a full round is logged with counted time, pauses and how it ended');
+  await check(pomo().then((p) => p?.phase === 'break' && p.running && p.plannedSec === 300), 'the 5-minute rest starts by itself');
+  await pp.clock.fastForward('05:00');
+  await pp.waitForTimeout(300);
+  await check(rounds().then((r) => r.some((x) => x.kind === 'break' && x.completed === true && x.activeSec === 300)), 'the full rest is logged');
+  await check(pomo().then((p) => p?.phase === 'idle'), 'after the rest the timer waits for the next start');
+  await pp.click('#pomo-start');
+  await pp.clock.fastForward('03:00');
+  await pp.click('#pomo-stop');
+  await pp.click('#pomo-stop');
+  await pp.waitForTimeout(300);
+  await check(rounds().then((r) => r.some((x) => x.kind === 'work' && x.completed === false && x.endedBy === 'stop' && x.activeSec >= 179 && x.activeSec <= 181)), 'an early stop is logged as not full');
+  await pp.click('.sheet button[aria-label="ปิด"]');
+  await pp.waitForTimeout(300);
+  await pp.click('.tab:has-text("เมนู")');
+  await pp.click('.hubtile:has(.h3:text-is("โฟกัส 25/5"))');
+  await pp.waitForTimeout(400);
+  await pp.screenshot({ path: 'test/out/32-pomodoro-stats.png', fullPage: true });
+  await noOverflow(pp, 'pomodoro stats');
+  const txt = await pp.locator('.screen').last().innerText();
+  await check(txt.includes('บันทึกทุกรอบ') && txt.includes('หยุดก่อนครบ') && txt.includes('คุณภาพการโฟกัส'), 'stats page shows the log and quality');
+  await pp.click('button:has-text("ดาวน์โหลดทุกรอบ")');
+  await pp.waitForTimeout(300);
+  await check(pp.evaluate(() => { const d = Object.values(window.__downloadData || {})[0] || ''; return d.split('\r\n').length === 4 && d.includes('กดจบก่อน') && d.includes('ครบเวลา'); }), 'CSV export holds every round');
 }
 
 // light theme and small phone

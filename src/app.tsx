@@ -12,6 +12,9 @@ import { BodyScreen, BreathSheet, WorkoutSheet } from './screens/Body';
 import { HubScreen } from './screens/Hub';
 import { AddSheet, TaskSheet, TasksScreen } from './screens/Tasks';
 import { PlanSheet, TodayScreen, useDay } from './screens/Today';
+import { FocusBar, FocusSheet, usePomodoroClock } from './screens/Focus';
+import * as Pomodoro from './lib/pomodoro';
+import { sound } from './lib/sound';
 
 const TABS: { id: TabId; label: string; icon: (p?: { size?: number }) => JSX.Element }[] = [
   { id: 'today', label: 'วันนี้', icon: I.today },
@@ -63,7 +66,9 @@ function Shell() {
   const [workout, setWorkout] = useState<string | null>(null);
   const [breath, setBreath] = useState<string | null>(null);
   const [plan, setPlan] = useState(false);
+  const [focus, setFocus] = useState(false);
   const d = useDay();
+  usePomodoroClock();
 
   const setTab = (t: TabId) => {
     if (t === tab && t === 'hub') setHubPage(null);
@@ -96,6 +101,16 @@ function Shell() {
         setTabRaw('hub');
       },
       plan: () => setPlan(true),
+      focus: (t, start) => {
+        if (t && Pomodoro.current().phase === 'idle') {
+          const link = { taskId: t.id, label: t.title, area: t.area };
+          if (start) {
+            sound.unlock();
+            Pomodoro.startWork(link);
+          } else Pomodoro.setLink(link);
+        }
+        setFocus(true);
+      },
     }),
     [tab],
   );
@@ -129,6 +144,8 @@ function Shell() {
       <WorkoutSheet programId={workout} onClose={() => setWorkout(null)} />
       <BreathSheet presetId={breath} onClose={() => setBreath(null)} />
       <PlanSheet open={plan} onClose={() => setPlan(false)} key={plan ? 'pl-open' : 'pl'} />
+      <FocusSheet open={focus} onClose={() => setFocus(false)} nav={nav} />
+      <FocusBar hidden={focus} onOpen={() => setFocus(true)} />
       <ToastHost />
     </div>
   );

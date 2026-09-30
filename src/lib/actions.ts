@@ -20,7 +20,10 @@ export function setCheck(date: string, itemId: string, on: boolean) {
 function addToMonth(kind: 'focus' | 'workouts' | 'breath', start: number, entry: object) {
   store.write(`logs/${monthOf(dayOfTs(start))}`, { kind: 'merge', data: { [kind]: { [uid()]: entry } } });
 }
-export const logFocus = (s: FocusSession) => addToMonth('focus', s.start, s);
+/** A fixed id per round, so two open devices finishing the same round write it once. */
+export function logFocusSession(id: string, s: FocusSession) {
+  store.write(`logs/${monthOf(dayOfTs(s.start))}`, { kind: 'merge', data: { focus: { [id]: s } } });
+}
 export const logWorkout = (s: WorkoutSession) => addToMonth('workouts', s.start, s);
 export const logBreath = (s: BreathSession) => addToMonth('breath', s.start, s);
 

@@ -106,7 +106,7 @@
   const caps = {
     db,
     sample,
-    downloads: { save: async ({ filename }) => { window.__downloads.push(filename); return { status: 'saved' }; } },
+    downloads: { save: async ({ filename, data }) => { window.__downloads.push(filename); (window.__downloadData ||= {})[filename] = data; return { status: 'saved' }; } },
     assets: { upload: async (b) => ({ id: 'a' + Date.now(), url: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="30" height="40"><rect width="30" height="40" fill="#888"/></svg>'), sizeBytes: b.size, contentType: 'image/svg+xml' }) },
   };
   // __NO_DB__ mimics viewers without artifact storage, like the Claude iPhone app.

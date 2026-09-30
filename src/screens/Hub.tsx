@@ -2,7 +2,7 @@ import { Fragment, type ComponentChildren, type JSX } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { BarChart, Spark } from '../components/charts';
 import { I } from '../components/icons';
-import { burstFrom, Check, CountUp, Delta, Empty, Glass, Pill, Seg, Sheet, toast } from '../components/ui';
+import { burstFrom, Check, CountUp, Delta, Empty, Glass, PageHead, Pill, Seg, Sheet, toast } from '../components/ui';
 import { FABRICS, LOADS, MACHINE_CARE, SMELL_FIX } from '../content/laundry';
 import { markSeen, newTask, saveMeta, saveSettings, saveShop, saveTask, setCycleMinutes, startLaundry } from '../lib/actions';
 import { coach, copyForError, sampleCap } from '../lib/ai';
@@ -18,6 +18,7 @@ import { addDays, fmtHM, fmtShortDate, parseHM as parseHMx, relTime, todayKey, w
 import type { DigestItem, ShopItem } from '../lib/types';
 import { buildMetrics, fmtValue, GROUP_LABEL, lastDays, summarize, type Group, type Summary } from '../lib/progress';
 import { saveBackup } from '../lib/backup';
+import { FocusPage } from './Focus';
 
 const TILES: { id: HubPage; name: string; sub: string; icon: (p?: { size?: number }) => JSX.Element; tone: string }[] = [
   { id: 'seoulful', name: 'Seoulful', sub: 'ยอดขาย · รีวิว · ไอเดีย', icon: I.store, tone: 'var(--a-seoulful)' },
@@ -25,25 +26,13 @@ const TILES: { id: HubPage; name: string; sub: string; icon: (p?: { size?: numbe
   { id: 'inbox', name: 'แจ้งเตือน', sub: 'อีเมลสำคัญ · งานที่ต้องตาม', icon: I.mail, tone: 'var(--a-home)' },
   { id: 'laundry', name: 'ซักผ้า', sub: 'รอบซัก · วิธีดูแลผ้า', icon: I.shirt, tone: 'var(--a-home)' },
   { id: 'shop', name: 'ของที่ต้องซื้อ', sub: 'รายการ · ราคา', icon: I.cart, tone: 'var(--a-personal)' },
+  { id: 'focus', name: 'โฟกัส 25/5', sub: 'ปอมโมโดโร · สถิติทุกรอบ', icon: I.focus, tone: 'var(--accent)' },
   { id: 'stats', name: 'สถิติ', sub: 'เทียบกับตัวเองในอดีต', icon: I.chart, tone: 'var(--a-trading)' },
   { id: 'coach', name: 'ถาม Claude', sub: 'ถามเรื่องแผนของคุณ', icon: I.spark, tone: 'var(--a-growth)' },
   { id: 'hairline', name: 'ไรผม', sub: 'ถ่ายรูปติดตาม', icon: I.camera, tone: 'var(--a-personal)' },
   { id: 'alarm', name: 'ปลุกและการนอน', sub: 'ตั้งเวลาปลุก · โค้ชการนอน', icon: I.alarm, tone: 'var(--a-growth)' },
   { id: 'settings', name: 'ตั้งค่า', sub: 'เวลาประจำวัน · สำรองข้อมูล', icon: I.gear, tone: 'var(--ink-2)' },
 ];
-
-function PageHead(props: { title: string; eyebrow?: string; onBack: () => void; right?: ComponentChildren }) {
-  return (
-    <div class="topbar">
-      <button class="icon-btn" aria-label="กลับ" onClick={props.onBack}>{I.back({ size: 20 })}</button>
-      <div class="grow">
-        {props.eyebrow && <div class="eyebrow">{props.eyebrow}</div>}
-        <h1 class="h1" style={{ fontSize: '22px' }}>{props.title}</h1>
-      </div>
-      {props.right}
-    </div>
-  );
-}
 
 // The morning digest tags mail by inbox with these English keys.
 const SOURCE_LABEL: Record<string, string> = { Personal: 'เมลส่วนตัว', Seoulful: 'เมลร้าน' };
@@ -747,6 +736,7 @@ export function HubScreen(props: { nav: Nav; page: HubPage | null; setPage: (p: 
     case 'laundry': return <LaundryPage back={back} />;
     case 'shop': return <ShopPage back={back} />;
     case 'stats': return <ProgressPage back={back} />;
+    case 'focus': return <FocusPage back={back} nav={props.nav} />;
     case 'coach': return <CoachPage back={back} />;
     case 'hairline': return <HairlinePage back={back} />;
     case 'alarm': return <AlarmPage back={back} />;

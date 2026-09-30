@@ -11,6 +11,9 @@ const niceMax = (v: number) => {
   return step * p;
 };
 
+/** Axis labels: whole numbers as they are, others to at most two decimals (a scale of 1 shows 0, 0.5, 1). */
+const tick = (x: number) => (Number.isInteger(x) ? String(x) : String(+x.toFixed(2)));
+
 function Tip(props: { pct: number; value: string; label: string }) {
   const shift = props.pct < 18 ? '-12%' : props.pct > 82 ? '-88%' : '-50%';
   return (
@@ -56,7 +59,7 @@ export function BarChart(props: { data: BarDatum[]; height?: number; unit: strin
         {[0, 0.5, 1].map((f) => (
           <g key={f}>
             <line x1={left} x2={W} y1={top + plotH * (1 - f)} y2={top + plotH * (1 - f)} stroke="var(--stroke)" stroke-width="1" />
-            <text x={left - 6} y={top + plotH * (1 - f) + 3} text-anchor="end">{Math.round(max * f)}</text>
+            <text x={left - 6} y={top + plotH * (1 - f) + 3} text-anchor="end">{tick(max * f)}</text>
           </g>
         ))}
         {props.data.map((d, i) => {
@@ -119,7 +122,7 @@ export function HeatMap(props: { data: { key: string; value: number }[]; unit: s
   return (
     <div style={{ position: 'relative', overflowX: 'auto' }}>
       <svg class="chart" viewBox={`0 0 ${W + (cell + gap)} ${H}`} style={{ maxWidth: `${(W + cell + gap) * 1.3}px` }} role="img" aria-label={props.title}>
-        {['M', 'W', 'F'].map((l, i) => (
+        {['จ.', 'พ.', 'ศ.'].map((l, i) => (
           <text key={l} x={0} y={(i * 2) * (cell + gap) + cell - 4}>{l}</text>
         ))}
         {props.data.map((d, i) => {

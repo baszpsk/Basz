@@ -4,7 +4,7 @@
 
 import { cap, errCode } from './claude';
 import { DEFAULT_SETTINGS } from './defaults';
-import type { Digest, MonthLog, Plan, Settings, ShopItem, Task } from './types';
+import type { Digest, MonthLog, Plan, Pomo, Settings, ShopItem, Task } from './types';
 
 export { DEFAULT_SETTINGS };
 
@@ -19,6 +19,10 @@ export interface Meta {
   onboarded?: boolean;
   /** When the last backup file was saved. */
   lastBackupAt?: number;
+  /** The Pomodoro round in progress. */
+  pomo?: Pomo;
+  /** Keep the screen on while a round runs (default on). */
+  keepAwake?: boolean;
 }
 
 export interface State {

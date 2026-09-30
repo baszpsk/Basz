@@ -395,6 +395,9 @@ export function TaskSheet(props: { task: Task | null; onClose: () => void; nav: 
               {I.check({ size: 18 })} เสร็จ
             </button>
           )}
+          {live.status === 'todo' && (
+            <button class="btn" onClick={() => { props.onClose(); props.nav.focus(live, true); }}>{I.focus({ size: 18 })} โฟกัส 25 นาที</button>
+          )}
           {live.status === 'done' && <button class="btn" onClick={() => { reopenTask(live); props.onClose(); }}>ยังไม่เสร็จ</button>}
           {live.flow && live.status === 'todo' && (
             <button class="btn" onClick={() => { snooze(live, 30); toast('เลื่อนไป 30 นาทีแล้ว'); props.onClose(); }}>เลื่อน 30 นาที</button>

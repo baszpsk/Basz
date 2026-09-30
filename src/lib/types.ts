@@ -40,7 +40,8 @@ export interface Settings {
   workoutTime: string;
   workoutDays: number[];
   rolloverHour: number;
-  focus: { work: number; short: number; long: number; every: number; autoBreak: boolean };
+  /** Pomodoro: minutes of focus, minutes of rest, and whether the rest starts by itself. */
+  focus: { work: number; rest: number; autoBreak: boolean };
   coffeeCutoff: string;
   dryHours: number;
   proteinTarget: number;
@@ -84,11 +85,39 @@ export interface DayLog {
 export interface FocusSession {
   start: number;
   end: number;
+  /** Active minutes, rounded (pauses excluded). */
   minutes: number;
   kind: 'work' | 'break';
   taskId?: string;
   area?: Area;
   label?: string;
+  plannedSec?: number;
+  /** Seconds the clock actually ran, pauses excluded. */
+  activeSec?: number;
+  /** Ran the full planned length. */
+  completed?: boolean;
+  /** timer = ran out; stop = ended early; skip = rest cut short to start the next round. */
+  endedBy?: 'timer' | 'stop' | 'skip';
+  pauses?: { s: number; e: number }[];
+  pausedSec?: number;
+}
+
+/** The round in progress. Kept in cfg/meta so it survives a reload and follows him across devices. */
+export interface Pomo {
+  phase: 'idle' | 'work' | 'break';
+  running: boolean;
+  /** When this round first started. */
+  phaseStart: number | null;
+  /** When the clock last started running. */
+  resumedAt: number | null;
+  /** Seconds counted before resumedAt. */
+  accSec: number;
+  plannedSec: number;
+  /** A pause still open has e = null. */
+  pauses: { s: number; e: number | null }[];
+  taskId: string | null;
+  label: string | null;
+  area: Area | null;
 }
 
 export interface SetLog { reps?: number; seconds?: number; level: number }
