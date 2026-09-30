@@ -22,10 +22,10 @@ export function PageHead(props: { title: string; eyebrow?: string; onBack: () =>
 }
 
 
-export function Glass(props: { class?: string; children?: ComponentChildren; tone?: string; style?: JSX.CSSProperties; onClick?: () => void }) {
+export function Glass(props: { class?: string; children?: ComponentChildren; tone?: string; style?: JSX.CSSProperties; onClick?: () => void; id?: string }) {
   const style = { ...(props.style || {}), ...(props.tone ? { '--tone': props.tone } : {}) } as JSX.CSSProperties;
   return (
-    <div class={`glass ${props.class || ''}`} style={style} onClick={props.onClick}>
+    <div id={props.id} class={`glass ${props.class || ''}`} style={style} onClick={props.onClick}>
       {props.children}
     </div>
   );

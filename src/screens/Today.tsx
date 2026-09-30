@@ -15,6 +15,7 @@ import { addDays, dateKey, fmtDayLong, fmtDuration, fmtHM, logicalMinutes, month
 import type { DayLog, Task } from '../lib/types';
 import { saveBackup } from '../lib/backup';
 import { buildMetrics, summarize } from '../lib/progress';
+import { CalendarCard } from './Calendar';
 import { TaskComposer, TaskRow } from './Tasks';
 
 const KIND_TONE: Record<string, string> = {
@@ -390,6 +391,7 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
 
       <NowCard d={d} nav={props.nav} />
       <AlertsStrip alerts={props.alerts} nav={props.nav} />
+      <CalendarCard nav={props.nav} />
 
       <div class="tiles">
         <div class="tile" style={{ '--tone': 'var(--good)' } as JSX.CSSProperties}>

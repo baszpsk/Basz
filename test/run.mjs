@@ -89,6 +89,38 @@ await page.screenshot({ path: 'test/out/01-today-dark.png', fullPage: true });
 await noOverflow(page, 'today');
 await check(page.locator('.hero').first().isVisible(), 'Now card renders');
 
+// ปฏิทินในหน้าแรก: เห็นงานที่ต้องส่งวันนี้ เลื่อนไปพรุ่งนี้ได้ ดูทั้งเดือนได้ แล้วเลือกวันเดิมกลับเองได้
+{
+  const addDay = (k, n) => { const [y, mo, d] = k.split('-').map(Number); return key(new Date(y, mo - 1, d + n, 12)); };
+  const t1Due = () => page.evaluate(() => window.__docs.get('tasks/t1')?.due);
+  const before = await t1Due();
+  const moveBtn = '#calendar button[aria-label="เลื่อนวัน ตรวจสต็อกกิมจิและสั่งของ"]';
+  await check(page.locator('#calendar').innerText().then((t) => t.includes('ตรวจสต็อกกิมจิ')), 'ปฏิทินในหน้าแรกแสดงงานที่ต้องส่งวันนี้');
+  await page.click(moveBtn);
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'test/out/04-calendar-move.png' });
+  const from = await page.inputValue('#move-date');
+  await page.click('#move-tomorrow');
+  await page.waitForTimeout(300);
+  await check(t1Due().then((d) => d === addDay(from, 1)), 'เลื่อนงานไปพรุ่งนี้จากปฏิทินได้');
+  await page.click('#cal-view');
+  await page.waitForTimeout(200);
+  await check(page.locator('#calendar .calday').count().then((n) => n >= 28 && n % 7 === 0), 'ปฏิทินดูทั้งเดือนได้');
+  await page.screenshot({ path: 'test/out/05-calendar-month.png', fullPage: true });
+  await noOverflow(page, 'calendar month');
+  await page.click('#calendar .calday.today + .calday');
+  await page.waitForTimeout(200);
+  await page.click(moveBtn);
+  await page.waitForTimeout(200);
+  await page.fill('#move-date', before.slice(0, 10));
+  await page.click('#move-save');
+  await page.waitForTimeout(300);
+  await check(t1Due().then((d) => d === before), 'เลือกวันเองในหน้าต่างเลื่อนได้');
+  await page.click('#calendar .chip:text-is("วันนี้")');
+  await page.click('#cal-view');
+  await page.waitForTimeout(200);
+}
+
 // tick a routine item in the hero or the timeline
 const firstCheck = page.locator('.hero .check').first();
 if (await firstCheck.count()) {

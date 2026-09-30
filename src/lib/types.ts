@@ -12,6 +12,8 @@ export interface Task {
   impact: 1 | 2 | 3;
   /** 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:mm' in local time */
   due?: string;
+  /** สถานที่ที่ต้องไป (สำหรับนัด) */
+  place?: string;
   estimateMin?: number;
   status: TaskStatus;
   createdAt: number;

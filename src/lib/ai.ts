@@ -18,6 +18,7 @@ export interface ParsedTask {
   area: Area;
   impact: 1 | 2 | 3;
   due?: string | null;
+  place?: string | null;
   estimateMin?: number;
   notes?: string;
   waitingOn?: string | null;
@@ -56,7 +57,7 @@ export function copyForError(e: unknown): string {
 /** The owner asked for the most capable model on every call, even when it is slower. */
 const TIER = 'complex';
 
-export async function parseTask(text: string, nowIso: string, weekdayName: string, answers?: Record<string, string>, signal?: AbortSignal): Promise<ParsedTask> {
+export async function parseTask(text: string, nowIso: string, weekdayName: string, answers?: Record<string, string>, signal?: AbortSignal, due?: string): Promise<ParsedTask> {
   const sample = await sampleCap();
   if (!sample) throw { code: 'capability_disabled' };
   const ans = answers && Object.keys(answers).length
@@ -64,7 +65,7 @@ export async function parseTask(text: string, nowIso: string, weekdayName: strin
     : '';
   const prompt = `${context()}
 Now: ${nowIso} (${weekdayName}), Asia/Bangkok.
-Turn this quick note into ONE task. Note: """${text.slice(0, 2000)}"""${ans}
+Turn this quick note into ONE task. Note: """${text.slice(0, 2000)}"""${ans}${due ? `\nHe added it on the calendar day ${due}: use that date unless the note names another.` : ''}
 Write every text he will read (title, notes, subtasks, questions, options) in plain, short Thai. Keep people's names and brand names as written.
 
 Reply with only JSON:
@@ -72,6 +73,7 @@ Reply with only JSON:
  "area": one of ${AREAS},
  "impact": 1|2|3 (3 = moves revenue, health or a key relationship a lot),
  "due": "YYYY-MM-DD" or "YYYY-MM-DDTHH:mm" or null (only if the note or answers say so; never invent),
+ "place": where he has to go, only if the note says (short, as written), else null,
  "estimateMin": number (realistic minutes),
  "notes": string (optional, in Thai),
  "waitingOn": person name if the task is waiting on someone else, else null,

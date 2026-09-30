@@ -102,6 +102,7 @@ interface Draft {
   impact: 1 | 2 | 3;
   dueDate: string;
   dueTime: string;
+  place: string;
   estimateMin: number;
   notes: string;
   waitingOn: string;
@@ -116,6 +117,7 @@ const draftFromParsed = (p: ParsedTask, fallback: string): Draft => ({
   impact: [1, 2, 3].includes(p.impact) ? p.impact : 2,
   dueDate: p.due ? p.due.slice(0, 10) : '',
   dueTime: p.due && p.due.includes('T') ? p.due.slice(11, 16) : '',
+  place: p.place || '',
   estimateMin: p.estimateMin && p.estimateMin > 0 ? Math.round(p.estimateMin) : 25,
   notes: p.notes || '',
   waitingOn: p.waitingOn || '',
@@ -132,6 +134,7 @@ function draftToTask(d: Draft, base?: Task): Task {
     area: d.area,
     impact: d.impact,
     due,
+    place: d.place.trim() || undefined,
     estimateMin: d.estimateMin,
     notes: d.notes.trim() || undefined,
     repeatDays: d.repeatDays || undefined,
@@ -171,6 +174,10 @@ function DraftForm(props: { d: Draft; set: (d: Draft) => void; showWaiting: bool
           <label for="t-time">เวลา</label>
           <input id="t-time" type="time" class="input" value={d.dueTime} onInput={(e) => set({ ...d, dueTime: (e.target as HTMLInputElement).value })} />
         </div>
+      </div>
+      <div class="field">
+        <label for="t-place">สถานที่ (ถ้าต้องไป)</label>
+        <input id="t-place" class="input" placeholder="เช่น คลินิก สาขา หรือชื่อร้าน" value={d.place} onInput={(e) => set({ ...d, place: (e.target as HTMLInputElement).value })} />
       </div>
       <div class="field">
         <label>ใช้เวลา</label>
@@ -231,7 +238,7 @@ function DraftForm(props: { d: Draft; set: (d: Draft) => void; showWaiting: bool
 }
 
 /** New task / idea from free text, sorted by Claude when available. */
-export function AddSheet(props: { open: boolean; text: string; mode: 'task' | 'idea'; onClose: () => void }) {
+export function AddSheet(props: { open: boolean; text: string; mode: 'task' | 'idea'; due?: string; onClose: () => void }) {
   const now = useNow(60000);
   const [phase, setPhase] = useState<'thinking' | 'ready'>('ready');
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -255,7 +262,7 @@ export function AddSheet(props: { open: boolean; text: string; mode: 'task' | 'i
     setNote('');
     const sample = await sampleCap();
     if (!sample) {
-      setDraft(draftFromParsed({ title: props.text, area: 'seoulful', impact: 2 }, props.text));
+      setDraft(draftFromParsed({ title: props.text, area: 'seoulful', impact: 2, due: props.due }, props.text));
       setNote('ใช้ Claude ในหน้านี้ไม่ได้ กรอกรายละเอียดเองได้เลย');
       setPhase('ready');
       return;
@@ -268,14 +275,14 @@ export function AddSheet(props: { open: boolean; text: string; mode: 'task' | 'i
         setFirst(b.firstStep || '');
         setQuestions(b.questions || []);
       } else {
-        const p = await parseTask(props.text, iso(), wdName(now.getDay()), ans, c.signal);
-        setDraft(draftFromParsed(p, props.text));
+        const p = await parseTask(props.text, iso(), wdName(now.getDay()), ans, c.signal, props.due);
+        setDraft(draftFromParsed({ ...p, due: p.due || props.due }, props.text));
         setQuestions((p.questions || []).filter((q) => q && q.q && Array.isArray(q.options) && !ans[q.q]));
       }
     } catch (e) {
       const msg = copyForError(e);
       if (msg) setNote(msg);
-      if (props.mode === 'task') setDraft((d) => d || draftFromParsed({ title: props.text, area: 'seoulful', impact: 2 }, props.text));
+      if (props.mode === 'task') setDraft((d) => d || draftFromParsed({ title: props.text, area: 'seoulful', impact: 2, due: props.due }, props.text));
     } finally {
       if (ctl.current === c) setPhase('ready');
     }
@@ -369,6 +376,7 @@ export function TaskSheet(props: { task: Task | null; onClose: () => void; nav: 
     if (!t) return;
     setD({
       title: t.title, area: t.area, impact: t.impact, dueDate: t.due?.slice(0, 10) || '', dueTime: t.due?.includes('T') ? t.due.slice(11, 16) : '',
+      place: t.place || '',
       estimateMin: t.estimateMin || 25, notes: t.notes || '', waitingOn: '', followUpDays: 2, repeatDays: t.repeatDays || 0, subtasks: [],
     });
     setPerson(t.waitingOn || '');

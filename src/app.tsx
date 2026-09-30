@@ -61,7 +61,7 @@ function Shell() {
   const s = useStore();
   const [tab, setTabRaw] = useLocal<TabId>('bz1:tab', 'today');
   const [hubPage, setHubPage] = useState<HubPage | null>(null);
-  const [add, setAdd] = useState<{ text: string; mode: 'task' | 'idea'; n: number } | null>(null);
+  const [add, setAdd] = useState<{ text: string; mode: 'task' | 'idea'; due?: string; n: number } | null>(null);
   const [task, setTask] = useState<Task | null>(null);
   const [workout, setWorkout] = useState<string | null>(null);
   const [breath, setBreath] = useState<string | null>(null);
@@ -88,7 +88,7 @@ function Shell() {
     () => ({
       tab: setTab,
       task: (t) => setTask(t),
-      add: (text, mode = 'task') => setAdd({ text, mode, n: Date.now() }),
+      add: (text, mode = 'task', due) => setAdd({ text, mode, due, n: Date.now() }),
       workout: (id) => setWorkout(id),
       breath: (id) => setBreath(id || 'daily'),
       hub: (p) => {
@@ -139,7 +139,7 @@ function Shell() {
       {tab === 'hub' && <HubScreen nav={nav} page={hubPage} setPage={setHubPage} alerts={alerts} />}
       <TabBar tab={tab} setTab={setTab} badges={{ hub: alerts.length, tasks: alerts.filter((a) => a.kind === 'flow' || a.kind === 'followup').length }} />
 
-      <AddSheet open={!!add} text={add?.text || ''} mode={add?.mode || 'task'} onClose={() => setAdd(null)} key={add?.n} />
+      <AddSheet open={!!add} text={add?.text || ''} mode={add?.mode || 'task'} due={add?.due} onClose={() => setAdd(null)} key={add?.n} />
       <TaskSheet task={task} onClose={() => setTask(null)} nav={nav} />
       <WorkoutSheet programId={workout} onClose={() => setWorkout(null)} />
       <BreathSheet presetId={breath} onClose={() => setBreath(null)} />

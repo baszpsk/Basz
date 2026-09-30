@@ -6,7 +6,7 @@ export type HubPage = 'seoulful' | 'markets' | 'inbox' | 'laundry' | 'shop' | 's
 export interface Nav {
   tab: (t: TabId) => void;
   task: (t: Task) => void;
-  add: (text: string, mode?: 'task' | 'idea') => void;
+  add: (text: string, mode?: 'task' | 'idea', due?: string) => void;
   workout: (programId: string) => void;
   breath: (presetId?: string) => void;
   hub: (page: HubPage) => void;
