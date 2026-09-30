@@ -147,7 +147,7 @@ export function FocusSheet(props: { open: boolean; onClose: () => void; nav: Nav
   };
 
   return (
-    <Sheet open={props.open} onClose={props.onClose} title={`ปอมโมโดโร ${f.work}/${f.rest}`}>
+    <Sheet open={props.open} onClose={props.onClose} title={`Pomodoro ${f.work}/${f.rest}`}>
       <div class="stack" style={{ alignItems: 'center' }}>
         <Ring value={p.phase === 'idle' ? 0 : 1 - left / total} size={232} stroke={12} tone={tone} label={`${phaseLabel(p)} เหลือ ${fmtClock(left)}`}>
           <div class="center">
@@ -298,7 +298,7 @@ export function FocusPage(props: { back: () => void; nav: Nav }) {
 
   return (
     <div class="screen">
-      <PageHead title={`โฟกัส ${f.work}/${f.rest}`} eyebrow="ปอมโมโดโร · สถิติทุกรอบ" onBack={props.back} />
+      <PageHead title={`โฟกัส ${f.work}/${f.rest}`} eyebrow="Pomodoro · สถิติทุกรอบ" onBack={props.back} />
       <Glass class="hero" tone="var(--accent)">
         <div class="glow" />
         <div class="eyebrow">วันนี้</div>

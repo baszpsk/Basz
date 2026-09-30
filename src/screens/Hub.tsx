@@ -26,7 +26,7 @@ const TILES: { id: HubPage; name: string; sub: string; icon: (p?: { size?: numbe
   { id: 'inbox', name: 'แจ้งเตือน', sub: 'อีเมลสำคัญ · งานที่ต้องตาม', icon: I.mail, tone: 'var(--a-home)' },
   { id: 'laundry', name: 'ซักผ้า', sub: 'รอบซัก · วิธีดูแลผ้า', icon: I.shirt, tone: 'var(--a-home)' },
   { id: 'shop', name: 'ของที่ต้องซื้อ', sub: 'รายการ · ราคา', icon: I.cart, tone: 'var(--a-personal)' },
-  { id: 'focus', name: 'โฟกัส 25/5', sub: 'ปอมโมโดโร · สถิติทุกรอบ', icon: I.focus, tone: 'var(--accent)' },
+  { id: 'focus', name: 'โฟกัส 25/5', sub: 'Pomodoro · สถิติทุกรอบ', icon: I.focus, tone: 'var(--accent)' },
   { id: 'stats', name: 'สถิติ', sub: 'เทียบกับตัวเองในอดีต', icon: I.chart, tone: 'var(--a-trading)' },
   { id: 'coach', name: 'ถาม Claude', sub: 'ถามเรื่องแผนของคุณ', icon: I.spark, tone: 'var(--a-growth)' },
   { id: 'hairline', name: 'ไรผม', sub: 'ถ่ายรูปติดตาม', icon: I.camera, tone: 'var(--a-personal)' },

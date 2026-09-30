@@ -62,7 +62,7 @@ export function buildDay(key: string, st: Settings, plan: Plan | null, log?: Day
   const squeeze = trading && W < ORDERS && W + 20 > ORDERS;
   const fresh: CheckItem[] = [
     { id: 'light', label: 'รับแสงแดด 5–10 นาที', hint: 'เปิดม่านหรือออกไปรับแสงจริง ช่วยตั้งนาฬิกาชีวิต', kind: 'habit' },
-    { id: 'skin-am', label: 'ล้างหน้า + ทากันแดด', hint: 'คลีนเซอร์อ่อน → มอยส์เจอไรเซอร์ → กันแดดยาว 2 นิ้ว', kind: 'care' },
+    { id: 'skin-am', label: 'ล้างหน้า + ทากันแดด', hint: 'cleanser อ่อน → moisturizer → กันแดดยาว 2 นิ้ว', kind: 'care' },
   ];
   add({
     id: 'wake',
@@ -162,7 +162,7 @@ export function buildDay(key: string, st: Settings, plan: Plan | null, log?: Day
       id: 'wind', start: L - 90, end: L - 30, kind: 'wind', area: 'health', title: 'ผ่อนคลายก่อนนอน', sub: 'หรี่ไฟ · วางมือถือ · ทำตามลำดับ',
       items: [
         { id: 'dim', label: 'หรี่ไฟ วางมือถือ', kind: 'habit' },
-        { id: 'skin-pm', label: 'บำรุงผิวก่อนนอน', hint: 'ล้างหน้า → ยาทาสิว/เรตินอยด์ ขนาดเม็ดถั่ว → มอยส์เจอไรเซอร์', kind: 'care' },
+        { id: 'skin-pm', label: 'บำรุงผิวก่อนนอน', hint: 'ล้างหน้า → ยาทาสิว/retinoid ขนาดเม็ดถั่ว → moisturizer', kind: 'care' },
         { id: 'teeth', label: 'แปรงฟัน 2 นาที + ไหมขัดฟัน', kind: 'care' },
       ],
     });

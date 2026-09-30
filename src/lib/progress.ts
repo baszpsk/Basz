@@ -106,7 +106,7 @@ export function buildMetrics(
   const metric = (id: string, group: Group, label: string, unit: string, better: 'up' | 'down', tone: string, decimals = 0): Metric => ({ id, group, label, unit, better, tone, decimals, values: new Map() });
   const routine = metric('routine', 'Day', 'กิจวัตรที่ทำ', '%', 'up', 'var(--good)');
   const tasksDone = metric('tasks', 'Day', 'งานที่เสร็จ', '', 'up', 'var(--accent)');
-  const pomos = metric('pomodoros', 'Day', 'ปอมโมโดโรที่ครบ', 'รอบ', 'up', 'var(--accent)');
+  const pomos = metric('pomodoros', 'Day', 'Pomodoro ที่ครบ', 'รอบ', 'up', 'var(--accent)');
   const focusMin = metric('focusmin', 'Day', 'เวลาโฟกัส', 'นาที', 'up', 'var(--accent)');
   const meds = metric('meds', 'Health', 'กินยาครบ', '%', 'up', 'var(--a-growth)');
   const onTime = metric('lightsout', 'Sleep', 'ปิดไฟตรงเวลา 7 วันล่าสุด', 'คืน', 'up', 'var(--a-home)');
