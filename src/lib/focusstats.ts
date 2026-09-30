@@ -7,9 +7,12 @@
 //   started within (rest + 5) minutes of the previous one ending;
 // - back after rest = minutes from a rest ending to the next focus round
 //   starting on the same day.
+// ตัวเลขตามช่วงเวลา (focusPeriod) นับเฉพาะรอบในช่วงที่เลือก วันก่อนเริ่มใช้แอปไม่นับเป็นวันศูนย์
+// และถ้าช่วงนี้ยังไม่จบ ช่วงก่อนหน้านับแค่ถึงเวลาเดียวกัน
 
 import { AREA_LABEL } from './priority';
-import { addDays, pad, todayKey, weekday } from './time';
+import { bucketsOf, dayStartTs, type Bucket, type Period } from './range';
+import { addDays, daysBetween, pad, todayKey, wdName, weekday } from './time';
 import type { Area, FocusSession, MonthLog, Task } from './types';
 
 export interface Round extends FocusSession {
@@ -40,30 +43,54 @@ export interface Span {
   rate?: number;
 }
 
+export interface Quality {
+  rounds: number;
+  rate?: number;
+  pausesPerRound?: number;
+  pausedMinPerRound?: number;
+  noPauseShare?: number;
+  restsFullShare?: number;
+  backMedianMin?: number;
+  focusMinPerActiveDay?: number;
+}
+
 export interface FocusReport {
   rows: Round[];
   today: DayFocus;
   /** Yesterday up to this same clock time. */
   pace?: { done: number; focusSec: number };
-  last7: Span;
-  prev7: Span;
-  quality: {
-    rounds: number;
-    rate?: number;
-    pausesPerRound?: number;
-    pausedMinPerRound?: number;
-    noPauseShare?: number;
-    restsFullShare?: number;
-    backMedianMin?: number;
-    focusMinPerActiveDay?: number;
-  };
-  total: { done: number; stopped: number; focusSec: number; activeDays: number; first?: string; best?: { key: string; done: number }; streak: number; longestStreak: number; longestChain: { n: number; key?: string } };
+  /** วันติดกันที่มีรอบครบ นับวันนี้เมื่อวันนี้ครบแล้วอย่างน้อยหนึ่งรอบ */
+  streak: number;
+  /** วันแรกที่มีบันทึก */
+  first?: string;
+}
+
+export interface BucketFocus {
+  b: Bucket;
+  done: number;
+  stopped: number;
+  focusSec: number;
+}
+
+export interface PeriodFocus {
+  rows: Round[];
+  cur: Span;
+  /** วันที่นับในช่วงนี้ เริ่มนับตั้งแต่วันแรกที่มีบันทึก */
+  curDays: number;
+  prev?: Span;
+  prevDays?: number;
+  buckets: BucketFocus[];
+  /** รอบที่ครบเฉลี่ยต่อช่องของช่วงก่อนหน้าทั้งช่วง */
+  prevAvg?: number;
+  quality: Quality;
   byHour: number[];
-  /** Monday first: average full rounds per calendar day since the first record. */
+  /** จันทร์ก่อน: รอบที่ครบเฉลี่ยต่อวันปฏิทินในช่วง */
   byWeekday: { label: string; avg: number }[];
   byArea: { label: string; done: number; focusSec: number }[];
   byTask: { label: string; done: number; stopped: number; focusSec: number }[];
-  daily: { key: string; done: number; focusMin: number }[];
+  best?: { key: string; done: number };
+  longestStreak: number;
+  longestChain: { n: number; key?: string };
   heat: { key: string; value: number }[];
 }
 
@@ -86,129 +113,160 @@ const median = (xs: number[]) => {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 };
 
-export function focusReport(logs: Record<string, MonthLog>, tasks: Record<string, Task>, rollover: number, restMin: number, today: string, now: Date): FocusReport {
-  const rows = collectRounds(logs, rollover);
-  const works = rows.filter((r) => r.kind === 'work' && r.day <= today);
-  const rests = rows.filter((r) => r.kind === 'break' && r.day <= today);
-  const days = new Map<string, DayFocus>();
-  const day = (k: string) => {
-    let d = days.get(k);
-    if (!d) days.set(k, (d = emptyDay(k)));
-    return d;
-  };
-
+function spanOf(works: Round[]): Span {
+  const out: Span = { done: 0, stopped: 0, focusSec: 0, activeDays: 0 };
+  const days = new Set<string>();
   for (const r of works) {
-    const d = day(r.day);
-    if (isFull(r)) d.done += 1;
-    else d.stopped += 1;
-    d.focusSec += secOf(r);
-    d.pauses += r.pauses?.length || 0;
-    d.pausedSec += r.pausedSec || 0;
-    d.firstStart = Math.min(d.firstStart ?? r.start, r.start);
-    d.lastEnd = Math.max(d.lastEnd ?? r.end, r.end);
+    if (isFull(r)) out.done += 1;
+    else out.stopped += 1;
+    out.focusSec += secOf(r);
+    days.add(r.day);
   }
-  for (const r of rests) {
-    const d = day(r.day);
-    if (isFull(r)) d.restsFull += 1;
-    else d.restsCut += 1;
-  }
+  out.activeDays = days.size;
+  if (out.done + out.stopped > 0) out.rate = out.done / (out.done + out.stopped);
+  return out;
+}
 
-  // Rounds in a row: full focus rounds, same day, each starting soon after the last.
+/** รอบที่ครบติดกัน: วันเดียวกัน และรอบถัดไปเริ่มภายใน (พัก + 5) นาทีหลังรอบก่อนจบ ต้องเรียงตามเวลา */
+function chains(works: Round[], restMin: number) {
   const gap = (restMin + 5) * 60000;
-  const longestChain: { n: number; key?: string } = { n: 0 };
+  const perDay = new Map<string, number>();
+  const longest: { n: number; key?: string } = { n: 0 };
   let run = 0;
   let prev: Round | null = null;
   for (const r of works) {
     if (!isFull(r)) run = 0;
     else run = run > 0 && prev && prev.day === r.day && r.start - prev.end <= gap ? run + 1 : 1;
     prev = r;
-    const d = day(r.day);
-    d.chain = Math.max(d.chain, run);
-    if (run > longestChain.n) {
-      longestChain.n = run;
-      longestChain.key = r.day;
+    perDay.set(r.day, Math.max(perDay.get(r.day) || 0, run));
+    if (run > longest.n) {
+      longest.n = run;
+      longest.key = r.day;
     }
   }
+  return { perDay, longest };
+}
 
-  const span = (from: string, to: string): Span => {
-    const out: Span = { done: 0, stopped: 0, focusSec: 0, activeDays: 0 };
-    for (let k = from; k <= to; k = addDays(k, 1)) {
-      const d = days.get(k);
-      if (!d) continue;
-      out.done += d.done;
-      out.stopped += d.stopped;
-      out.focusSec += d.focusSec;
-      if (d.done + d.stopped > 0) out.activeDays += 1;
-    }
-    if (out.done + out.stopped > 0) out.rate = out.done / (out.done + out.stopped);
-    return out;
-  };
+function qualityOf(works: Round[], rests: Round[], allWorks: Round[], span: Span): Quality {
+  const back: number[] = [];
+  for (const rest of rests) {
+    const next = allWorks.find((w) => w.start >= rest.end && w.day === rest.day);
+    if (next) back.push(Math.max(0, next.start - rest.end) / 60000);
+  }
+  const q: Quality = { rounds: works.length };
+  if (works.length) {
+    q.rate = span.rate;
+    q.pausesPerRound = works.reduce((a, r) => a + (r.pauses?.length || 0), 0) / works.length;
+    q.pausedMinPerRound = works.reduce((a, r) => a + (r.pausedSec || 0), 0) / 60 / works.length;
+    q.noPauseShare = works.filter((r) => !r.pauses?.length).length / works.length;
+  }
+  if (rests.length) q.restsFullShare = rests.filter(isFull).length / rests.length;
+  q.backMedianMin = median(back);
+  if (span.activeDays) q.focusMinPerActiveDay = span.focusSec / 60 / span.activeDays;
+  return q;
+}
+
+/** วันนี้แบบสด: ตัวเลขของวันนี้ เมื่อวานเวลาเดียวกัน และวันติดกัน */
+export function focusReport(logs: Record<string, MonthLog>, rollover: number, restMin: number, today: string, now: Date): FocusReport {
+  const rows = collectRounds(logs, rollover);
+  const works = rows.filter((r) => r.kind === 'work' && r.day <= today);
+  const t = emptyDay(today);
+  const dayDone = new Map<string, number>();
+  for (const r of works) {
+    if (isFull(r)) dayDone.set(r.day, (dayDone.get(r.day) || 0) + 1);
+    if (r.day !== today) continue;
+    if (isFull(r)) t.done += 1;
+    else t.stopped += 1;
+    t.focusSec += secOf(r);
+    t.pauses += r.pauses?.length || 0;
+    t.pausedSec += r.pausedSec || 0;
+    t.firstStart = Math.min(t.firstStart ?? r.start, r.start);
+    t.lastEnd = Math.max(t.lastEnd ?? r.end, r.end);
+  }
+  for (const r of rows) {
+    if (r.kind !== 'break' || r.day !== today) continue;
+    if (isFull(r)) t.restsFull += 1;
+    else t.restsCut += 1;
+  }
+  t.chain = chains(works.filter((r) => r.day === today), restMin).longest.n;
 
   // Yesterday up to this same clock time, so a half-done day races a fair opponent.
   const yesterday = addDays(today, -1);
   const cutoff = now.getTime() - 86400000;
   const yWorks = works.filter((r) => r.day === yesterday && r.end <= cutoff);
-  const pace = days.has(yesterday) ? { done: yWorks.filter(isFull).length, focusSec: yWorks.reduce((a, r) => a + secOf(r), 0) } : undefined;
+  const pace = works.some((r) => r.day === yesterday) ? { done: yWorks.filter(isFull).length, focusSec: yWorks.reduce((a, r) => a + secOf(r), 0) } : undefined;
 
-  // Quality over the last 30 days.
-  const from30 = addDays(today, -29);
-  const w30 = works.filter((r) => r.day >= from30);
-  const r30 = rests.filter((r) => r.day >= from30);
-  const s30 = span(from30, today);
-  const back: number[] = [];
-  for (const rest of r30) {
-    const next = works.find((w) => w.start >= rest.end && w.day === rest.day);
-    if (next) back.push(Math.max(0, next.start - rest.end) / 60000);
-  }
-  const quality: FocusReport['quality'] = { rounds: w30.length };
-  if (w30.length) {
-    quality.rate = s30.rate;
-    quality.pausesPerRound = w30.reduce((a, r) => a + (r.pauses?.length || 0), 0) / w30.length;
-    quality.pausedMinPerRound = w30.reduce((a, r) => a + (r.pausedSec || 0), 0) / 60 / w30.length;
-    quality.noPauseShare = w30.filter((r) => !r.pauses?.length).length / w30.length;
-  }
-  if (r30.length) quality.restsFullShare = r30.filter(isFull).length / r30.length;
-  quality.backMedianMin = median(back);
-  if (s30.activeDays) quality.focusMinPerActiveDay = s30.focusSec / 60 / s30.activeDays;
-
-  // All time.
-  const keys = [...days.keys()].sort();
-  const first = keys[0];
-  let best: { key: string; done: number } | undefined;
-  let longestStreak = 0;
-  let streakRun = 0;
-  if (first) {
-    for (let k = first; k <= today; k = addDays(k, 1)) {
-      const d = days.get(k);
-      if (d && d.done > (best?.done ?? 0)) best = { key: k, done: d.done };
-      streakRun = d && d.done > 0 ? streakRun + 1 : 0;
-      longestStreak = Math.max(longestStreak, streakRun);
-    }
-  }
   // Current streak counts today only once a round is done; until then it runs to yesterday.
   let streak = 0;
-  for (let k = (days.get(today)?.done || 0) > 0 ? today : yesterday; (days.get(k)?.done || 0) > 0; k = addDays(k, -1)) streak += 1;
-  const all = span(first || today, today);
+  for (let k = (dayDone.get(today) || 0) > 0 ? today : yesterday; (dayDone.get(k) || 0) > 0; k = addDays(k, -1)) streak += 1;
+  return { rows, today: t, pace, streak, first: rows[0]?.day };
+}
+
+/** ทุกตัวเลขของช่วงที่เลือก เทียบกับช่วงก่อนหน้าที่ยาวเท่ากัน */
+export function focusPeriod(rows: Round[], p: Period, tasks: Record<string, Task>, restMin: number, rollover: number, today: string, now: Date, first?: string): PeriodFocus {
+  const allWorks = rows.filter((r) => r.kind === 'work');
+  const inside = (r: Round, from: string, to: string) => r.day >= from && r.day <= to;
+  const cut = rows.filter((r) => inside(r, p.from, p.end));
+  const works = cut.filter((r) => r.kind === 'work');
+  const rests = cut.filter((r) => r.kind === 'break');
+  const cur = spanOf(works);
+  // วันก่อนเริ่มใช้แอปไม่ใช่วันที่ไม่ได้ทำ จึงเริ่มนับตั้งแต่วันแรกที่มีบันทึก
+  const countFrom = (from: string) => (first && first > from ? first : from);
+  const curDays = first && first <= p.end ? daysBetween(countFrom(p.from), p.end) + 1 : 0;
+
+  let prev: Span | undefined;
+  let prevDays: number | undefined;
+  let prevAvg: number | undefined;
+  const cp = p.prev;
+  if (cp && first && first <= cp.end) {
+    const cutoff = cp.partial ? dayStartTs(cp.from, rollover) + (now.getTime() - dayStartTs(p.from, rollover)) : Infinity;
+    prev = spanOf(allWorks.filter((r) => inside(r, cp.from, cp.to) && r.end <= cutoff));
+    prevDays = daysBetween(countFrom(cp.from), cp.end) + 1;
+  }
+  if (cp && p.unit !== 'hour' && first && first <= cp.to) {
+    const slots = bucketsOf(p.unit, countFrom(cp.from), cp.to, today, rollover, now).length;
+    const full = allWorks.filter((r) => isFull(r) && inside(r, cp.from, cp.to)).length;
+    if (slots) prevAvg = full / slots;
+  }
+
+  const buckets: BucketFocus[] = p.buckets.map((b) => ({ b, done: 0, stopped: 0, focusSec: 0 }));
+  for (const r of works) {
+    const x = p.unit === 'hour' ? buckets.find((q) => q.b.hour === new Date(r.start).getHours()) : buckets.find((q) => r.day >= q.b.from && r.day <= q.b.to);
+    if (!x) continue;
+    if (isFull(r)) x.done += 1;
+    else x.stopped += 1;
+    x.focusSec += secOf(r);
+  }
 
   const byHour = Array.from({ length: 24 }, () => 0);
-  for (const r of works) if (isFull(r)) byHour[new Date(r.start).getHours()] += 1;
+  const dayDone = new Map<string, number>();
+  for (const r of works) {
+    if (!isFull(r)) continue;
+    byHour[new Date(r.start).getHours()] += 1;
+    dayDone.set(r.day, (dayDone.get(r.day) || 0) + 1);
+  }
 
-  // Average full rounds per weekday over every calendar day since the first record.
   const wdDone = Array.from({ length: 7 }, () => 0);
   const wdDays = Array.from({ length: 7 }, () => 0);
-  if (first) {
-    for (let k = first; k <= today; k = addDays(k, 1)) {
+  let best: { key: string; done: number } | undefined;
+  let longestStreak = 0;
+  let run = 0;
+  if (curDays) {
+    for (let k = countFrom(p.from); k <= p.end; k = addDays(k, 1)) {
+      const d = dayDone.get(k) || 0;
       const w = weekday(k);
       wdDays[w] += 1;
-      wdDone[w] += days.get(k)?.done || 0;
+      wdDone[w] += d;
+      if (d > (best?.done ?? 0)) best = { key: k, done: d };
+      run = d > 0 ? run + 1 : 0;
+      longestStreak = Math.max(longestStreak, run);
     }
   }
-  const WD = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
-  const byWeekday = [1, 2, 3, 4, 5, 6, 0].map((w) => ({ label: WD[w], avg: wdDays[w] ? wdDone[w] / wdDays[w] : 0 }));
+  const byWeekday = [1, 2, 3, 4, 5, 6, 0].map((w) => ({ label: wdName(w), avg: wdDays[w] ? wdDone[w] / wdDays[w] : 0 }));
 
   const areaMap = new Map<string, { label: string; done: number; focusSec: number }>();
   const taskMap = new Map<string, { label: string; done: number; stopped: number; focusSec: number }>();
-  for (const r of w30) {
+  for (const r of works) {
     const aKey = r.area || '-';
     const a = areaMap.get(aKey) || { label: r.area ? AREA_LABEL[r.area as Area] : 'ไม่ได้เลือกงาน', done: 0, focusSec: 0 };
     if (isFull(r)) a.done += 1;
@@ -222,27 +280,32 @@ export function focusReport(logs: Record<string, MonthLog>, tasks: Record<string
     taskMap.set(r.taskId, t);
   }
 
+  // ปฏิทินสีแสดงเมื่อช่วงยาวพอ และไม่เกิน 53 สัปดาห์ล่าสุดของช่วง
+  const heat: { key: string; value: number }[] = [];
+  if (curDays >= 28) {
+    const daySec = new Map<string, number>();
+    for (const r of works) daySec.set(r.day, (daySec.get(r.day) || 0) + secOf(r));
+    const hf = countFrom(p.from) > addDays(p.end, -370) ? countFrom(p.from) : addDays(p.end, -370);
+    for (let k = hf; k <= p.end; k = addDays(k, 1)) heat.push({ key: k, value: Math.round((daySec.get(k) || 0) / 60) });
+  }
+
   return {
-    rows,
-    today: days.get(today) || emptyDay(today),
-    pace,
-    last7: span(addDays(today, -6), today),
-    prev7: span(addDays(today, -13), addDays(today, -7)),
-    quality,
-    total: { done: all.done, stopped: all.stopped, focusSec: all.focusSec, activeDays: keys.filter((k) => (days.get(k)?.done || 0) > 0).length, first, best, streak, longestStreak, longestChain },
+    rows: cut,
+    cur,
+    curDays,
+    prev,
+    prevDays,
+    buckets,
+    prevAvg,
+    quality: qualityOf(works, rests, allWorks, cur),
     byHour,
     byWeekday,
     byArea: [...areaMap.values()].sort((a, b) => b.focusSec - a.focusSec),
     byTask: [...taskMap.values()].sort((a, b) => b.focusSec - a.focusSec).slice(0, 8),
-    daily: Array.from({ length: 14 }, (_, i) => {
-      const k = addDays(today, i - 13);
-      const d = days.get(k);
-      return { key: k, done: d?.done || 0, focusMin: Math.round((d?.focusSec || 0) / 60) };
-    }),
-    heat: Array.from({ length: 84 }, (_, i) => {
-      const k = addDays(today, i - 83);
-      return { key: k, value: Math.round((days.get(k)?.focusSec || 0) / 60) };
-    }),
+    best,
+    longestStreak,
+    longestChain: chains(works, restMin).longest,
+    heat,
   };
 }
 

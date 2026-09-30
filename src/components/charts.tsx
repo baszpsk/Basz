@@ -14,7 +14,7 @@ const niceMax = (v: number) => {
 /** Axis labels: whole numbers as they are, others to at most two decimals (a scale of 1 shows 0, 0.5, 1). */
 const tick = (x: number) => (Number.isInteger(x) ? String(x) : String(+x.toFixed(2)));
 
-function Tip(props: { pct: number; value: string; label: string }) {
+function Tip(props: { pct: number; value: string; label: string; sub?: string }) {
   const shift = props.pct < 18 ? '-12%' : props.pct > 82 ? '-88%' : '-50%';
   return (
     <div
@@ -27,6 +27,7 @@ function Tip(props: { pct: number; value: string; label: string }) {
     >
       <div style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{props.value}</div>
       <div class="tiny">{props.label}</div>
+      {props.sub && <div class="tiny">{props.sub}</div>}
     </div>
   );
 }
@@ -38,9 +39,21 @@ function barPath(x: number, y: number, w: number, h: number, r = 4) {
   return `M${x},${y + h}V${y + rr}Q${x},${y} ${x + rr},${y}H${x + w - rr}Q${x + w},${y} ${x + w},${y + rr}V${y + h}Z`;
 }
 
-export interface BarDatum { key: string; label: string; value: number }
+export interface BarDatum {
+  key: string;
+  label: string;
+  /** ไม่มีค่า = ยังมาไม่ถึง จึงไม่วาดแท่ง */
+  value: number | undefined;
+  /** บรรทัดเสริมในกล่องตัวเลข */
+  sub?: string;
+  /** ข้อความเมื่อไม่มีค่า (ค่าเริ่มต้น "ยังไม่ถึง") */
+  note?: string;
+  /** ป้ายสั้นใต้แกน */
+  tick?: string;
+}
 
-export function BarChart(props: { data: BarDatum[]; height?: number; unit: string; tone?: string; title: string; labelLast?: boolean }) {
+/** แท่งเดียวสีเดียว เลือกได้ว่าจะติดป้ายใต้แกนทุกกี่แท่ง และมีเส้นอ้างอิงเทาพร้อมคำอธิบายเหนือกราฟ */
+export function BarChart(props: { data: BarDatum[]; height?: number; unit: string; tone?: string; title: string; labelLast?: boolean; every?: number; guide?: { value: number; label: string } }) {
   const W = 340;
   const H = props.height || 120;
   const top = 16;
@@ -48,14 +61,28 @@ export function BarChart(props: { data: BarDatum[]; height?: number; unit: strin
   const left = 28;
   const plotW = W - left - 4;
   const plotH = H - top - bottom;
-  const max = niceMax(Math.max(...props.data.map((d) => d.value), 1));
+  const max = niceMax(Math.max(...props.data.map((d) => d.value ?? 0), props.guide?.value ?? 0, 1));
   const slot = plotW / props.data.length;
   const bw = Math.min(24, slot - 2);
   const [hi, setHi] = useState<number | null>(null);
-  const last = props.data.length - 1;
+  const n = props.data.length;
+  let last = -1;
+  props.data.forEach((d, i) => {
+    if (d.value != null && d.value > 0) last = i;
+  });
+  const showTick = (i: number) => (props.every ? i % props.every === 0 : i === 0 || i === n - 1 || i === Math.floor((n - 1) / 2));
+  const gy = props.guide ? top + plotH * (1 - props.guide.value / max) : 0;
+  const cur = hi !== null ? props.data[hi] : undefined;
+  const said = props.data.filter((d) => d.value != null).map((d) => `${d.label} ${d.value} ${props.unit}`);
   return (
     <div style={{ position: 'relative' }}>
-      <svg class="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${props.title}: ${props.data.map((d) => `${d.label} ${d.value} ${props.unit}`).join(', ')}`}>
+      {props.guide && (
+        <div class="chart-key">
+          <i />
+          {props.guide.label}
+        </div>
+      )}
+      <svg class="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${props.title}: ${said.join(', ')}${props.guide ? ` · ${props.guide.label}` : ''}`}>
         {[0, 0.5, 1].map((f) => (
           <g key={f}>
             <line x1={left} x2={W} y1={top + plotH * (1 - f)} y2={top + plotH * (1 - f)} stroke="var(--stroke)" stroke-width="1" />
@@ -63,11 +90,11 @@ export function BarChart(props: { data: BarDatum[]; height?: number; unit: strin
           </g>
         ))}
         {props.data.map((d, i) => {
-          const h = (d.value / max) * plotH;
+          const h = ((d.value ?? 0) / max) * plotH;
           const x = left + i * slot + (slot - bw) / 2;
           return (
             <g key={d.key}>
-              <path d={barPath(x, top + plotH - h, bw, h)} fill={props.tone || 'var(--accent)'} opacity={hi === null || hi === i ? 1 : 0.45} />
+              {d.value != null && <path d={barPath(x, top + plotH - h, bw, h)} fill={props.tone || 'var(--accent)'} opacity={hi === null || hi === i ? 1 : 0.45} />}
               <rect
                 x={left + i * slot}
                 y={top}
@@ -75,27 +102,30 @@ export function BarChart(props: { data: BarDatum[]; height?: number; unit: strin
                 height={plotH + bottom}
                 fill="transparent"
                 tabIndex={0}
-                aria-label={`${d.label}: ${d.value} ${props.unit}`}
+                aria-label={`${d.label}: ${d.value == null ? d.note ?? 'ยังไม่ถึง' : `${d.value} ${props.unit}`}`}
                 onPointerEnter={() => setHi(i)}
                 onPointerLeave={() => setHi(null)}
                 onFocus={() => setHi(i)}
                 onBlur={() => setHi(null)}
                 onClick={() => setHi(hi === i ? null : i)}
               />
-              {(i === 0 || i === last || i === Math.floor(last / 2)) && (
-                <text x={left + i * slot + slot / 2} y={H - 4} text-anchor="middle">{d.label}</text>
+              {showTick(i) && (
+                <text x={left + i * slot + slot / 2} y={H - 4} text-anchor="middle">{d.tick ?? d.label}</text>
               )}
             </g>
           );
         })}
-        {props.labelLast && props.data[last]?.value > 0 && hi === null && (
-          <text x={left + last * slot + slot / 2} y={top + plotH - (props.data[last].value / max) * plotH - 5} text-anchor="middle" style={{ fill: 'var(--ink)', fontWeight: 700 } as JSX.CSSProperties}>
+        {props.guide && (
+          <line x1={left} x2={W} y1={gy} y2={gy} stroke="var(--ink-2)" stroke-width="1.5" opacity="0.55" pointer-events="none" />
+        )}
+        {props.labelLast && last >= 0 && hi === null && (
+          <text x={left + last * slot + slot / 2} y={top + plotH - ((props.data[last].value ?? 0) / max) * plotH - 5} text-anchor="middle" style={{ fill: 'var(--ink)', fontWeight: 700 } as JSX.CSSProperties}>
             {props.data[last].value}
           </text>
         )}
       </svg>
-      {hi !== null && props.data[hi] && (
-        <Tip pct={((left + hi * slot + slot / 2) / W) * 100} value={`${props.data[hi].value} ${props.unit}`} label={props.data[hi].label} />
+      {cur && hi !== null && (
+        <Tip pct={((left + hi * slot + slot / 2) / W) * 100} value={cur.value == null ? cur.note ?? 'ยังไม่ถึง' : `${cur.value} ${props.unit}`} label={cur.label} sub={cur.value == null ? undefined : cur.sub} />
       )}
     </div>
   );

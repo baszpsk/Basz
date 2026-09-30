@@ -2,6 +2,7 @@ import { Fragment, type ComponentChildren, type JSX } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { BarChart, Spark } from '../components/charts';
 import { I } from '../components/icons';
+import { RangeBar, useRange } from '../components/range';
 import { burstFrom, Check, CountUp, Delta, Empty, Glass, PageHead, Pill, Seg, Sheet, toast } from '../components/ui';
 import { FABRICS, LOADS, MACHINE_CARE, SMELL_FIX } from '../content/laundry';
 import { markSeen, newTask, saveMeta, saveSettings, saveShop, saveTask, setCycleMinutes, startLaundry } from '../lib/actions';
@@ -16,7 +17,8 @@ import { buildDay } from '../lib/schedule';
 import { caffeineCutoff } from '../lib/sleepcoach';
 import { addDays, fmtHM, fmtShortDate, parseHM as parseHMx, relTime, todayKey, wdName, weekday } from '../lib/time';
 import type { DigestItem, ShopItem } from '../lib/types';
-import { buildMetrics, fmtValue, GROUP_LABEL, lastDays, summarize, type Group, type Summary } from '../lib/progress';
+import { AGG_TEXT, buildMetrics, fmtValue, GROUP_LABEL, lastDays, summarize, summarizePeriod, type Group, type PeriodSummary, type Summary } from '../lib/progress';
+import { periodOf, type Period } from '../lib/range';
 import { saveBackup } from '../lib/backup';
 import { FocusPage } from './Focus';
 
@@ -434,55 +436,163 @@ function MetricSheet(props: { s: Summary | null; today: string; onClose: () => v
   );
 }
 
+function PeriodDelta(props: { x: PeriodSummary; vs: string }) {
+  const { x } = props;
+  if (!x.verdict || x.delta == null) return null;
+  const same = x.verdict === 'same';
+  const tone = x.verdict === 'better' ? 'var(--good)' : x.verdict === 'worse' ? 'var(--bad)' : 'var(--ink-3)';
+  return (
+    <span class="delta" style={{ '--tone': tone } as JSX.CSSProperties}>
+      {same ? '= เท่าเดิม' : `${x.delta > 0 ? '▲ +' : '▼ −'}${fmtValue(x.metric, Math.abs(x.delta))} ${x.verdict === 'better' ? 'ดีขึ้น' : 'แย่ลง'}`}
+      <span class="vs">{props.vs}</span>
+    </span>
+  );
+}
+
+function PeriodRow(props: { x: PeriodSummary; p: Period; onOpen: () => void }) {
+  const { x, p } = props;
+  const m = x.metric;
+  const name = m.periodLabel || m.label;
+  return (
+    <button class="item" onClick={props.onOpen}>
+      <div class="grow">
+        <div class="t">{name}</div>
+        <div class="d">{AGG_TEXT[m.agg]} · บันทึก {x.count} วัน</div>
+      </div>
+      {x.buckets.length > 1 && <Spark points={x.buckets.map((b) => ({ key: b.key, value: b.value }))} tone={m.tone} label={`${name} ${p.title}`} />}
+      <div style={{ textAlign: 'right', minWidth: '92px' }}>
+        <div class="display-num" style={{ fontSize: '18px' }}>{fmtValue(m, x.cur)}</div>
+        <PeriodDelta x={x} vs={x.prev != null ? `ก่อนหน้า ${fmtValue(m, x.prev)}` : ''} />
+      </div>
+    </button>
+  );
+}
+
+function PeriodSheet(props: { x: PeriodSummary | null; p: Period; onClose: () => void }) {
+  const { x, p } = props;
+  const m = x?.metric;
+  const n = x?.buckets.length || 0;
+  const row = (k: string, v: string) => (
+    <div class="item" key={k}>
+      <span class="grow sub">{k}</span>
+      <span class="num" style={{ fontWeight: 650 }}>{v}</span>
+    </div>
+  );
+  const verdict = x?.verdict === 'better' ? ' · ช่วงนี้ดีกว่า' : x?.verdict === 'worse' ? ' · ช่วงนี้แย่กว่า' : x?.verdict === 'same' ? ' · เท่ากัน' : '';
+  return (
+    <Sheet open={!!x} onClose={props.onClose} title={m ? m.periodLabel || m.label : undefined}>
+      {x && m && (
+        <div class="stack">
+          {n > 1 && (
+            <BarChart
+              data={x.buckets.map((b) => ({ key: b.key, label: b.label, tick: b.tick, note: b.future ? 'ยังไม่ถึง' : 'ไม่มีบันทึก', value: b.value == null ? undefined : m.decimals ? Number(b.value.toFixed(m.decimals)) : Math.round(b.value) }))}
+              unit={m.unit}
+              title={`${m.periodLabel || m.label} ${p.title}`}
+              tone={m.tone}
+              every={n <= 7 ? 1 : Math.ceil(n / 6)}
+              labelLast
+            />
+          )}
+          <Glass class="list">
+            {row(p.title, `${fmtValue(m, x.cur)} · ${AGG_TEXT[m.agg]}`)}
+            {p.prev && row(p.prev.label, `${fmtValue(m, x.prev)}${verdict}`)}
+            {row('ดีที่สุดตลอดกาล (ต่อวัน)', `${fmtValue(m, x.best?.value)}${x.best ? ` · ${fmtShortDate(x.best.key)}` : ''}`)}
+            {row('วันที่บันทึกในช่วงนี้', `${x.count} วัน`)}
+            {row('บันทึกครั้งแรก', x.first ? fmtShortDate(x.first) : '–')}
+          </Glass>
+          <div class="tiny">{m.better === 'up' ? 'ยิ่งสูงยิ่งดี' : 'ยิ่งต่ำยิ่งดี'} ทุกตัวเลขมาจากที่คุณบันทึกเอง และไม่มีการลบวันเก่า</div>
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
 function ProgressPage(props: { back: () => void }) {
   const s = useStore();
   const now = useNow(60000);
-  const today = todayKey(now, s.settings.rolloverHour);
-  const metrics = useMemo(() => buildMetrics(s.logs, s.tasks, s.digests, s.settings, s.plan, today, now), [s.logs, s.tasks, s.digests, s.settings, s.plan, today, Math.floor(now.getTime() / 300000)]);
-  const sums = useMemo(() => metrics.map((m) => summarize(m, today)), [metrics, today]);
+  const R = s.settings.rolloverHour;
+  const today = todayKey(now, R);
+  const tick5 = Math.floor(now.getTime() / 300000);
+  const metrics = useMemo(() => buildMetrics(s.logs, s.tasks, s.digests, s.settings, s.plan, today, now), [s.logs, s.tasks, s.digests, s.settings, s.plan, today, tick5]);
+  const first = useMemo(() => {
+    let f: string | undefined;
+    for (const m of metrics) for (const k of (m.daily || m.values).keys()) if (!f || k < f) f = k;
+    return f;
+  }, [metrics]);
+  const [sel, setSel] = useRange('basz-os.progress-range', 'day', today);
+  const period = useMemo(() => periodOf(sel, today, first, R, now), [sel, today, first, tick5]);
+  const dayMode = period.kind === 'day';
+  const day = period.from;
+  const sums = useMemo(() => metrics.map((m) => summarize(m, day, today)), [metrics, day, today]);
+  const psums = useMemo(() => (dayMode ? [] : metrics.map((m) => summarizePeriod(m, period))), [metrics, period, dayMode]);
   const [open, setOpen] = useState<Summary | null>(null);
+  const [openP, setOpenP] = useState<PeriodSummary | null>(null);
   const withData = sums.filter((x) => x.count > 0);
-  const vsToday = withData.filter((x) => x.latest?.key === today && x.verdict);
-  const count = (v: Summary['verdict']) => vsToday.filter((x) => x.verdict === v).length;
-  const bests = withData.filter((x) => x.isBest && x.latest?.key === today);
+  const pWith = psums.filter((x) => x.cur != null);
+  const verdicts: ('better' | 'same' | 'worse' | undefined)[] = dayMode ? withData.filter((x) => x.latest?.key === day).map((x) => x.verdict) : pWith.map((x) => x.verdict);
+  const count = (v: 'better' | 'same' | 'worse') => verdicts.filter((x) => x === v).length;
+  const compared = verdicts.filter(Boolean).length;
+  const bests = dayMode && day === today ? withData.filter((x) => x.isBest && x.latest?.key === today) : [];
   const missing = sums.filter((x) => x.count === 0).map((x) => x.metric.label);
   const lastBackup = s.meta.lastBackupAt;
   const backup = async () => {
     const r = await saveBackup();
     toast(r === 'saved' ? 'บันทึกไฟล์สำรองแล้ว' : r === 'declined' ? 'ยังไม่ได้บันทึกไฟล์สำรอง' : r === 'unavailable' ? 'หน้านี้ดาวน์โหลดไฟล์สำรองไม่ได้' : 'บันทึกไฟล์สำรองไม่สำเร็จ');
   };
+  const heading = dayMode ? `${period.title} เทียบกับครั้งก่อน` : period.prev ? `${period.title} เทียบ${period.prev.label}` : `${period.title} ตั้งแต่วันแรกที่บันทึก`;
+  const explain = dayMode
+    ? compared
+      ? 'แต่ละตัวเทียบกับครั้งล่าสุดที่บันทึก แตะแต่ละแถวเพื่อดูค่าเฉลี่ย 7 และ 30 วัน และสถิติดีที่สุดตลอดกาล'
+      : `${period.title}ยังไม่มีตัวเลขให้เทียบ ติ๊กงานในตาราง บันทึกการออกกำลังกาย หรือจับเวลาโฟกัส แล้วตัวเลขจะขึ้นเทียบกับครั้งก่อนทันที`
+    : period.prev
+      ? 'แต่ละตัวรวมหรือเฉลี่ยตามชนิดของมัน ช่วงที่ยังไม่จบเทียบกับช่วงก่อนหน้าจำนวนวันเท่ากัน แตะแถวเพื่อดูกราฟ'
+      : 'แต่ละตัวรวมหรือเฉลี่ยตั้งแต่วันแรกที่บันทึก แตะแถวเพื่อดูกราฟ';
   return (
     <div class="screen">
       <PageHead title="สถิติ" eyebrow="เทียบกับตัวเองในอดีต" onBack={props.back} />
+      <RangeBar sel={sel} period={period} onChange={setSel} today={today} first={first} id="progress-range" />
       <Glass class="hero" tone="var(--accent)">
         <div class="glow" />
-        <div class="eyebrow">วันนี้ เทียบกับครั้งก่อน</div>
-        <div class="tiles" style={{ marginTop: '10px' }}>
-          <div class="tile" style={{ '--tone': 'var(--good)' } as JSX.CSSProperties}><div class="k">ดีขึ้น</div><div class="v"><CountUp value={count('better')} /></div></div>
-          <div class="tile" style={{ '--tone': 'var(--ink-2)' } as JSX.CSSProperties}><div class="k">เท่าเดิม</div><div class="v"><CountUp value={count('same')} /></div></div>
-          <div class="tile" style={{ '--tone': 'var(--bad)' } as JSX.CSSProperties}><div class="k">แย่ลง</div><div class="v"><CountUp value={count('worse')} /></div></div>
-        </div>
+        <div class="eyebrow">{heading}</div>
+        {(dayMode || period.prev) && (
+          <div class="tiles" style={{ marginTop: '10px' }}>
+            <div class="tile" style={{ '--tone': 'var(--good)' } as JSX.CSSProperties}><div class="k">ดีขึ้น</div><div class="v"><CountUp value={count('better')} /></div></div>
+            <div class="tile" style={{ '--tone': 'var(--ink-2)' } as JSX.CSSProperties}><div class="k">เท่าเดิม</div><div class="v"><CountUp value={count('same')} /></div></div>
+            <div class="tile" style={{ '--tone': 'var(--bad)' } as JSX.CSSProperties}><div class="k">แย่ลง</div><div class="v"><CountUp value={count('worse')} /></div></div>
+          </div>
+        )}
         {bests.length > 0 && (
           <div class="row wrap" style={{ gap: '6px', marginTop: '12px' }}>
             {bests.map((b) => <span key={b.metric.id} class="pill" style={{ '--tone': 'var(--a-trading)' } as JSX.CSSProperties}>{I.trophy({ size: 12 })} สถิติใหม่ · {b.metric.label} {fmtValue(b.metric, b.latest!.value)}</span>)}
           </div>
         )}
-        <div class="sub" style={{ marginTop: '10px' }}>
-          {vsToday.length ? 'แต่ละตัวเทียบกับครั้งล่าสุดที่บันทึก แตะแต่ละแถวเพื่อดูค่าเฉลี่ย 7 และ 30 วัน และสถิติดีที่สุดตลอดกาล' : 'วันนี้ยังไม่มีตัวเลขให้เทียบ ติ๊กงานในตาราง ทำเช็คอิน หรือบันทึกการออกกำลังกาย แล้วตัวเลขจะขึ้นเทียบกับครั้งก่อนทันที'}
-        </div>
+        <div class="sub" style={{ marginTop: '10px' }}>{explain}</div>
       </Glass>
       {GROUPS.map((g) => {
-        const list = withData.filter((x) => x.metric.group === g);
+        if (dayMode) {
+          const list = withData.filter((x) => x.metric.group === g);
+          if (!list.length) return null;
+          return (
+            <Fragment key={g}>
+              <div class="section-head"><h2 class="h2">{GROUP_LABEL[g]}</h2></div>
+              <Glass class="list">
+                {list.map((x) => <MetricRow key={x.metric.id} s={x} today={day} onOpen={() => setOpen(x)} />)}
+              </Glass>
+            </Fragment>
+          );
+        }
+        const list = pWith.filter((x) => x.metric.group === g);
         if (!list.length) return null;
         return (
           <Fragment key={g}>
             <div class="section-head"><h2 class="h2">{GROUP_LABEL[g]}</h2></div>
             <Glass class="list">
-              {list.map((x) => <MetricRow key={x.metric.id} s={x} today={today} onOpen={() => setOpen(x)} />)}
+              {list.map((x) => <PeriodRow key={x.metric.id} x={x} p={period} onOpen={() => setOpenP(x)} />)}
             </Glass>
           </Fragment>
         );
       })}
+      {!dayMode && pWith.length === 0 && <Glass><Empty title={`ไม่มีบันทึกใน${period.title}`} body="เลือกช่วงอื่นด้านบน" /></Glass>}
       {missing.length > 0 && <div class="tiny" style={{ padding: '0 4px' }}>เริ่มแสดงเมื่อมีบันทึก: {missing.join(' · ')}</div>}
       <Glass class="pad stack-sm">
         <div class="h3">ประวัติของคุณ</div>
@@ -492,7 +602,8 @@ function ProgressPage(props: { back: () => void }) {
           <button class="btn small" onClick={backup}>{I.download({ size: 16 })} บันทึกไฟล์สำรอง</button>
         </div>
       </Glass>
-      <MetricSheet s={open} today={today} onClose={() => setOpen(null)} />
+      <MetricSheet s={open} today={day} onClose={() => setOpen(null)} />
+      <PeriodSheet x={openP} p={period} onClose={() => setOpenP(null)} />
     </div>
   );
 }

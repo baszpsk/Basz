@@ -4,6 +4,7 @@
 // logs do, and the numbers can never drift from what actually happened.
 
 import { allItems, buildDay } from './schedule';
+import type { Period } from './range';
 import { addDays } from './time';
 import type { DayLog, Digest, MonthLog, Plan, Settings, Task } from './types';
 
@@ -11,6 +12,9 @@ export type Group = 'Day' | 'Sleep' | 'Body' | 'Health' | 'Seoulful';
 /** Section headings for each group. */
 export const GROUP_LABEL: Record<Group, string> = { Day: 'ประจำวัน', Sleep: 'การนอน', Body: 'ร่างกาย', Health: 'สุขภาพ', Seoulful: 'ร้าน Seoulful' };
 export interface Point { key: string; value: number }
+/** วิธีรวมค่ารายวันเมื่อดูเป็นช่วง: รวมทั้งช่วง เฉลี่ยต่อวันที่บันทึก หรือค่าสูงสุด */
+export type Agg = 'sum' | 'mean' | 'max';
+export const AGG_TEXT: Record<Agg, string> = { sum: 'รวมทั้งช่วง', mean: 'เฉลี่ยต่อวันที่บันทึก', max: 'สูงสุดในช่วง' };
 
 export interface Metric {
   id: string;
@@ -20,8 +24,13 @@ export interface Metric {
   better: 'up' | 'down';
   tone: string;
   decimals: number;
+  agg: Agg;
   /** Recorded values by logical day. Days without data are absent, never 0. */
   values: Map<string, number>;
+  /** ค่ารายวันจริง สำหรับตัวที่ values เป็นยอด 7 วันล่าสุด ใช้เมื่อดูเป็นช่วง */
+  daily?: Map<string, number>;
+  /** ชื่อเมื่อดูเป็นช่วง ถ้าต่างจากชื่อปกติ */
+  periodLabel?: string;
   /** For counts that grow through the day: yesterday's value at this same time, so a half-done day races a fair opponent. */
   pace?: { key: string; value: number; at: string };
 }
@@ -103,19 +112,24 @@ export function buildMetrics(
   const span: string[] = [];
   if (first) for (let k = first; k <= today; k = addDays(k, 1)) span.push(k);
 
-  const metric = (id: string, group: Group, label: string, unit: string, better: 'up' | 'down', tone: string, decimals = 0): Metric => ({ id, group, label, unit, better, tone, decimals, values: new Map() });
-  const routine = metric('routine', 'Day', 'กิจวัตรที่ทำ', '%', 'up', 'var(--good)');
-  const tasksDone = metric('tasks', 'Day', 'งานที่เสร็จ', '', 'up', 'var(--accent)');
-  const pomos = metric('pomodoros', 'Day', 'Pomodoro ที่ครบ', 'รอบ', 'up', 'var(--accent)');
-  const focusMin = metric('focusmin', 'Day', 'เวลาโฟกัส', 'นาที', 'up', 'var(--accent)');
-  const meds = metric('meds', 'Health', 'กินยาครบ', '%', 'up', 'var(--a-growth)');
-  const onTime = metric('lightsout', 'Sleep', 'ปิดไฟตรงเวลา 7 วันล่าสุด', 'คืน', 'up', 'var(--a-home)');
-  const wk7 = metric('workouts', 'Body', 'ออกกำลังกาย 7 วันล่าสุด', 'ครั้ง', 'up', 'var(--a-health)');
-  const push = metric('pushup', 'Body', 'วิดพื้นเซ็ตที่ดีที่สุด', 'ครั้ง', 'up', 'var(--a-health)');
-  const reps = metric('reps', 'Body', 'จำนวนครั้งรวมที่ออกกำลัง', 'ครั้ง', 'up', 'var(--a-health)');
-  const breath = metric('breath', 'Body', 'หายใจท้อง', 'นาที', 'up', 'var(--a-health)');
-  const sales = metric('sales', 'Seoulful', 'ยอดขายที่รายงาน', '฿', 'up', 'var(--a-seoulful)');
-  const rating = metric('rating', 'Seoulful', 'ดาวรีวิว', '★', 'up', 'var(--a-seoulful)', 1);
+  const metric = (id: string, group: Group, label: string, unit: string, better: 'up' | 'down', tone: string, agg: Agg, decimals = 0): Metric => ({ id, group, label, unit, better, tone, decimals, agg, values: new Map() });
+  const routine = metric('routine', 'Day', 'กิจวัตรที่ทำ', '%', 'up', 'var(--good)', 'mean');
+  const tasksDone = metric('tasks', 'Day', 'งานที่เสร็จ', '', 'up', 'var(--accent)', 'sum');
+  const pomos = metric('pomodoros', 'Day', 'Pomodoro ที่ครบ', 'รอบ', 'up', 'var(--accent)', 'sum');
+  const focusMin = metric('focusmin', 'Day', 'เวลาโฟกัส', 'นาที', 'up', 'var(--accent)', 'sum');
+  const meds = metric('meds', 'Health', 'กินยาครบ', '%', 'up', 'var(--a-growth)', 'mean');
+  const onTime = metric('lightsout', 'Sleep', 'ปิดไฟตรงเวลา 7 วันล่าสุด', 'คืน', 'up', 'var(--a-home)', 'sum');
+  const wk7 = metric('workouts', 'Body', 'ออกกำลังกาย 7 วันล่าสุด', 'ครั้ง', 'up', 'var(--a-health)', 'sum');
+  const push = metric('pushup', 'Body', 'วิดพื้นเซ็ตที่ดีที่สุด', 'ครั้ง', 'up', 'var(--a-health)', 'max');
+  const reps = metric('reps', 'Body', 'จำนวนครั้งรวมที่ออกกำลัง', 'ครั้ง', 'up', 'var(--a-health)', 'sum');
+  const breath = metric('breath', 'Body', 'หายใจท้อง', 'นาที', 'up', 'var(--a-health)', 'sum');
+  const sales = metric('sales', 'Seoulful', 'ยอดขายที่รายงาน', '฿', 'up', 'var(--a-seoulful)', 'sum');
+  const rating = metric('rating', 'Seoulful', 'ดาวรีวิว', '★', 'up', 'var(--a-seoulful)', 'mean', 1);
+  // สองตัวนี้ปกติแสดงยอด 7 วันล่าสุด เมื่อดูเป็นช่วงจึงใช้ค่ารายวันจริงรวมกันแทน
+  onTime.daily = new Map();
+  onTime.periodLabel = 'คืนที่ปิดไฟตรงเวลา';
+  wk7.daily = new Map();
+  wk7.periodLabel = 'ออกกำลังกาย';
 
   for (const k of span) {
     const dl = dayLogs.get(k);
@@ -146,6 +160,8 @@ export function buildMetrics(
     }
     wk7.values.set(k, w);
     onTime.values.set(k, n);
+    wk7.daily!.set(k, a?.workouts || 0);
+    if (dl) onTime.daily!.set(k, dl.checks?.['lights-out'] ? 1 : 0);
   }
   for (const d of Object.values(digests)) {
     const items = Object.values(d.items || {});
@@ -181,12 +197,13 @@ export function buildMetrics(
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : undefined);
 
-export function summarize(m: Metric, today: string): Summary {
+/** วันนี้จริง (realToday) ใช้ตัดสินว่าจะเทียบกับเมื่อวานเวลาเดียวกันไหม เมื่อดูวันอื่นจะเทียบกับครั้งก่อนที่บันทึกตามปกติ */
+export function summarize(m: Metric, today: string, realToday = today): Summary {
   const pts = [...m.values.entries()].filter(([k]) => k <= today).sort(([a], [b]) => (a < b ? -1 : 1)).map(([key, value]) => ({ key, value }));
   const inRange = (from: string, to: string) => pts.filter((p) => p.key >= from && p.key <= to).map((p) => p.value);
   const better = (a: number, b: number) => (m.better === 'up' ? a > b : a < b);
   const latest = pts[pts.length - 1];
-  const live = !!m.pace && latest?.key === today;
+  const live = !!m.pace && today === realToday && latest?.key === today;
   const prev = live ? { key: m.pace!.key, value: m.pace!.value } : pts[pts.length - 2];
   let best: Point | undefined;
   for (const p of pts) if (!best || better(p.value, best.value)) best = p;
@@ -225,4 +242,64 @@ export function fmtValue(m: Metric, v: number | undefined): string {
   if (m.unit === '฿') return '฿' + Math.round(v).toLocaleString();
   const s = m.decimals ? v.toFixed(m.decimals) : Math.round(v).toLocaleString();
   return m.unit && m.unit !== '%' && !m.unit.startsWith('/') ? `${s} ${m.unit}` : `${s}${m.unit}`;
+}
+
+/** ค่ารวมของช่วง from ถึง to ตามวิธีรวมของตัวชี้วัด ไม่มีบันทึกเลยได้ undefined */
+export function periodValue(m: Metric, from: string, to: string): number | undefined {
+  const src = m.daily || m.values;
+  let n = 0;
+  let acc = 0;
+  let top = -Infinity;
+  for (let k = from; k <= to; k = addDays(k, 1)) {
+    const v = src.get(k);
+    if (v == null) continue;
+    n += 1;
+    acc += v;
+    top = Math.max(top, v);
+  }
+  if (!n) return undefined;
+  return m.agg === 'sum' ? acc : m.agg === 'mean' ? acc / n : top;
+}
+
+export interface PeriodSummary {
+  metric: Metric;
+  cur?: number;
+  prev?: number;
+  delta?: number;
+  verdict?: 'better' | 'same' | 'worse';
+  buckets: { key: string; label: string; tick: string; value: number | undefined; future: boolean }[];
+  /** วันที่มีบันทึกในช่วงนี้ */
+  count: number;
+  /** ค่ารายวันที่ดีที่สุดตลอดกาล */
+  best?: Point;
+  first?: string;
+}
+
+export function summarizePeriod(m: Metric, p: Period): PeriodSummary {
+  const src = m.daily || m.values;
+  const cur = periodValue(m, p.from, p.end);
+  const prev = p.prev ? periodValue(m, p.prev.from, p.prev.end) : undefined;
+  const better = (a: number, b: number) => (m.better === 'up' ? a > b : a < b);
+  const eps = Math.pow(10, -m.decimals) / 2;
+  const delta = cur != null && prev != null ? cur - prev : undefined;
+  const verdict = delta == null ? undefined : Math.abs(delta) < eps ? 'same' : better(cur!, prev!) ? 'better' : 'worse';
+  let count = 0;
+  for (let k = p.from; k <= p.end; k = addDays(k, 1)) if (src.has(k)) count += 1;
+  let best: Point | undefined;
+  let first: string | undefined;
+  for (const [key, value] of src) {
+    if (!first || key < first) first = key;
+    if (!best || better(value, best.value)) best = { key, value };
+  }
+  return {
+    metric: m,
+    cur,
+    prev,
+    delta,
+    verdict,
+    buckets: p.buckets.map((b) => ({ key: b.key, label: b.label, tick: b.tick, future: b.future, value: b.future || p.unit === 'hour' ? undefined : periodValue(m, b.from, b.to < p.end ? b.to : p.end) })),
+    count,
+    best,
+    first,
+  };
 }

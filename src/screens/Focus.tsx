@@ -6,17 +6,19 @@ import type { JSX } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { BarChart, HeatMap } from '../components/charts';
 import { I } from '../components/icons';
+import { RangeBar, useRange } from '../components/range';
 import { burstFrom, Empty, Glass, PageHead, Ring, Sheet, toast } from '../components/ui';
 import { saveMeta } from '../lib/actions';
 import { cap } from '../lib/claude';
-import { focusCsv, focusReport, isFull, secOf, type FocusReport, type Round } from '../lib/focusstats';
+import { focusCsv, focusPeriod, focusReport, isFull, secOf, type PeriodFocus, type Round } from '../lib/focusstats';
 import { useNow, useStore } from '../lib/hooks';
 import type { Nav } from '../lib/nav';
 import * as P from '../lib/pomodoro';
 import { AREA_LABEL, rankTasks } from '../lib/priority';
+import { periodOf } from '../lib/range';
 import { sound } from '../lib/sound';
 import { store } from '../lib/store';
-import { fmtClock, fmtShortDate, pad, todayKey } from '../lib/time';
+import { fmtClock, fmtDuration, fmtShortDate, pad, todayKey } from '../lib/time';
 import type { Pomo, Task } from '../lib/types';
 
 const hm = (ms: number) => {
@@ -26,6 +28,8 @@ const hm = (ms: number) => {
 const mins = (sec: number) => Math.round(sec / 60);
 const pct = (x?: number) => (x == null ? '–' : `${Math.round(x * 100)}%`);
 const one = (x?: number) => (x == null ? '–' : x.toFixed(1));
+/** เวลาแบบสั้นสำหรับช่องตัวเลข: ต่ำกว่าชั่วโมงเป็นนาที ที่เหลือเป็นชั่วโมงทศนิยมเดียว */
+const hrs = (min: number) => (min < 59.5 ? `${Math.round(min)} นาที` : `${(min / 60).toFixed(1)} ชม.`);
 
 /** Closes rounds that ran out, chimes, and keeps the screen awake while a round runs. Mounted once. */
 export function usePomodoroClock() {
@@ -116,7 +120,7 @@ export function FocusSheet(props: { open: boolean; onClose: () => void; nav: Nav
   const R = s.settings.rolloverHour;
   const today = todayKey(now, R);
   const minute = Math.floor(now.getTime() / 60000);
-  const rep = useMemo(() => focusReport(s.logs, s.tasks, R, f.rest, today, now), [s.logs, s.tasks, today, minute]);
+  const rep = useMemo(() => focusReport(s.logs, R, f.rest, today, now), [s.logs, today, minute]);
   const ranked = useMemo(() => rankTasks(Object.values(s.tasks), now.getTime(), today, R).slice(0, 4), [s.tasks, today, minute]);
   useEffect(() => {
     if (!confirm) return;
@@ -240,34 +244,49 @@ function Row(props: { k: string; v: string; sub?: string }) {
   );
 }
 
-function versus(a: number, b: number, unit: string) {
-  const d = a - b;
-  if (d === 0) return `เท่ากับ 7 วันก่อนหน้า`;
-  return `${d > 0 ? '+' : '−'}${Math.abs(d)} ${unit} จาก 7 วันก่อนหน้า`;
+/** ตัวเลขหลักหนึ่งช่อง ลูกศรกับสีบอกว่าดีขึ้นหรือแย่ลงจากช่วงก่อนหน้า และบอกค่าของช่วงก่อนหน้าไว้ด้วย */
+function Kpi(props: { k: string; v: string; now?: number; before?: number; beforeText?: string; fmt: (n: number) => string; better?: 'up' | 'down' }) {
+  const has = props.now != null && props.before != null;
+  const d = has ? props.now! - props.before! : 0;
+  const same = Math.abs(d) < 0.5;
+  const good = (props.better ?? 'up') === 'up' ? d > 0 : d < 0;
+  const tone = same ? 'var(--ink-3)' : good ? 'var(--good)' : 'var(--bad)';
+  return (
+    <div class="tile kpi">
+      <div class="k">{props.k}</div>
+      <div class="v">{props.v}</div>
+      {has && (
+        <span class="delta" style={{ '--tone': tone } as JSX.CSSProperties}>
+          {same ? '= เท่าเดิม' : `${d > 0 ? '▲ +' : '▼ −'}${props.fmt(Math.abs(d))}`}
+          <span class="vs">ก่อนหน้า {props.beforeText ?? props.fmt(props.before!)}</span>
+        </span>
+      )}
+    </div>
+  );
 }
 
-function Records(props: { rep: FocusReport }) {
-  const t = props.rep.total;
+function PeriodRecords(props: { pf: PeriodFocus; title: string }) {
+  const { pf } = props;
   return (
     <Glass class="pad stack-sm">
-      <div class="h3">สถิติตลอดกาล</div>
+      <div class="h3">สถิติสูงสุด · {props.title}</div>
       <div class="list">
-        <Row k="รอบที่ครบทั้งหมด" v={`${t.done} รอบ`} sub={t.first ? `ตั้งแต่ ${fmtShortDate(t.first)} · หยุดก่อนครบ ${t.stopped} รอบ` : undefined} />
-        <Row k="เวลาโฟกัสรวม" v={`${(t.focusSec / 3600).toFixed(1)} ชม.`} />
-        <Row k="วันที่ทำครบอย่างน้อย 1 รอบ" v={`${t.activeDays} วัน`} />
-        <Row k="ทำติดกันตอนนี้" v={`${t.streak} วัน`} sub={`ติดกันนานที่สุด ${t.longestStreak} วัน`} />
-        <Row k="วันที่ทำได้มากที่สุด" v={t.best ? `${t.best.done} รอบ` : '–'} sub={t.best ? fmtShortDate(t.best.key) : undefined} />
-        <Row k="ครบติดกันมากที่สุดในวันเดียว" v={`${t.longestChain.n} รอบ`} sub={t.longestChain.key ? fmtShortDate(t.longestChain.key) : undefined} />
+        <Row k="วันที่ทำครบมากที่สุด" v={pf.best ? `${pf.best.done} รอบ` : '–'} sub={pf.best ? fmtShortDate(pf.best.key) : undefined} />
+        <Row k="ทำติดกันนานที่สุด" v={`${pf.longestStreak} วัน`} sub="วันที่ครบอย่างน้อย 1 รอบ" />
+        <Row k="ครบติดกันมากที่สุดในวันเดียว" v={`${pf.longestChain.n} รอบ`} sub={pf.longestChain.key ? fmtShortDate(pf.longestChain.key) : undefined} />
+        <Row k="รวมทั้งช่วง" v={`${pf.cur.done} รอบ`} sub={`โฟกัส ${fmtDuration(pf.cur.focusSec / 60)} · หยุดก่อนครบ ${pf.cur.stopped} รอบ`} />
       </div>
     </Glass>
   );
 }
 
 function Log(props: { rows: Round[]; tasks: Record<string, Task> }) {
-  const recent = props.rows.slice(-40).reverse();
+  const [n, setN] = useState(12);
+  const recent = props.rows.slice(-n).reverse();
   return (
     <Glass class="pad stack-sm">
-      <div class="h3">บันทึกทุกรอบ (40 รอบล่าสุด)</div>
+      <div class="h3">บันทึกทุกรอบในช่วงนี้</div>
+      <div class="tiny">ล่าสุดอยู่บน · แสดง {recent.length} จาก {props.rows.length} รอบ</div>
       <div class="list">
         {recent.map((r) => {
           const ended = r.endedBy === 'skip' ? 'ข้ามพัก' : r.endedBy === 'break' ? 'หยุดเพื่อพัก' : isFull(r) ? 'ครบ' : 'หยุดก่อนครบ';
@@ -288,9 +307,14 @@ function Log(props: { rows: Round[]; tasks: Record<string, Task> }) {
           );
         })}
       </div>
+      {props.rows.length > n && (
+        <button class="btn small ghost" onClick={() => setN(n + 40)}>แสดงเพิ่มอีก {Math.min(40, props.rows.length - n)} รอบ</button>
+      )}
     </Glass>
   );
 }
+
+const UNIT_NAME = { hour: 'ชั่วโมง', day: 'วัน', week: 'สัปดาห์', month: 'เดือน' } as const;
 
 export function FocusPage(props: { back: () => void; nav: Nav }) {
   const s = useStore();
@@ -298,9 +322,17 @@ export function FocusPage(props: { back: () => void; nav: Nav }) {
   const f = s.settings.focus;
   const R = s.settings.rolloverHour;
   const today = todayKey(now, R);
-  const rep = useMemo(() => focusReport(s.logs, s.tasks, R, f.rest, today, now), [s.logs, s.tasks, today, Math.floor(now.getTime() / 60000)]);
+  const minute = Math.floor(now.getTime() / 60000);
+  const rep = useMemo(() => focusReport(s.logs, R, f.rest, today, now), [s.logs, today, minute]);
+  const [sel, setSel] = useRange('basz-os.focus-range', 'week', today);
+  const period = useMemo(() => periodOf(sel, today, rep.first, R, now), [sel, today, rep.first, minute]);
+  const pf = useMemo(() => focusPeriod(rep.rows, period, s.tasks, f.rest, R, today, now, rep.first), [rep, period, s.tasks]);
   const p = { ...P.IDLE, ...(s.meta.pomo || {}) };
-  const q = rep.quality;
+  const q = pf.quality;
+  const cmp = pf.prev;
+  const unitName = UNIT_NAME[period.unit];
+  const every = period.unit === 'hour' ? 6 : pf.buckets.length <= 7 ? 1 : Math.ceil(pf.buckets.length / 6);
+  const hours = Array.from({ length: 24 }, (_, i) => (R + i) % 24);
   const exportCsv = async () => {
     const downloads = await cap('downloads');
     if (!downloads) return toast('หน้านี้ดาวน์โหลดไฟล์ไม่ได้');
@@ -337,6 +369,7 @@ export function FocusPage(props: { back: () => void; nav: Nav }) {
         </div>
         <div class="tiny" style={{ marginTop: '10px' }}>
           {rep.today.firstStart ? `เริ่มรอบแรก ${hm(rep.today.firstStart)} · จบล่าสุด ${hm(rep.today.lastEnd!)} · หยุดก่อนครบ ${rep.today.stopped} · พักครบ ${rep.today.restsFull} · ตัดพัก ${rep.today.restsCut} · ครบติดกันสูงสุด ${rep.today.chain} รอบ` : 'วันนี้ยังไม่มีรอบที่บันทึก'}
+          {rep.streak > 0 && ` · ทำติดกัน ${rep.streak} วัน`}
         </div>
         <button class="btn primary block" style={{ marginTop: '12px' }} onClick={() => props.nav.focus()}>
           {p.phase === 'idle' ? <>{I.play({ size: 18 })} เริ่มโฟกัส {f.work} นาที</> : <>{I.clock({ size: 18 })} เปิดตัวจับเวลา · {phaseLabel(p)}</>}
@@ -347,63 +380,105 @@ export function FocusPage(props: { back: () => void; nav: Nav }) {
         <Glass><Empty title="ยังไม่มีรอบที่บันทึก" body={`กดเริ่มโฟกัส ${f.work} นาที แล้วสถิติทุกอย่างจะขึ้นที่นี่เอง`} /></Glass>
       ) : (
         <>
+          <RangeBar sel={sel} period={period} onChange={setSel} today={today} first={rep.first} id="focus-range" />
+
           <Glass class="pad stack-sm">
-            <div class="h3">7 วันล่าสุด</div>
-            <div class="list">
-              <Row k="รอบที่ครบ" v={`${rep.last7.done} รอบ`} sub={versus(rep.last7.done, rep.prev7.done, 'รอบ')} />
-              <Row k="เวลาโฟกัส" v={`${mins(rep.last7.focusSec)} นาที`} sub={versus(mins(rep.last7.focusSec), mins(rep.prev7.focusSec), 'นาที')} />
-              <Row k="ทำครบรอบ" v={pct(rep.last7.rate)} sub={`7 วันก่อนหน้า ${pct(rep.prev7.rate)}`} />
-              <Row k="วันที่ได้ทำ" v={`${rep.last7.activeDays}/7 วัน`} sub={`7 วันก่อนหน้า ${rep.prev7.activeDays}/7 วัน`} />
+            <div class="row between" style={{ alignItems: 'baseline' }}>
+              <div class="h3">สรุป</div>
+              {period.prev && cmp && <span class="tiny">เทียบ{period.prev.label}</span>}
             </div>
-          </Glass>
-
-          <Glass class="pad stack-sm">
-            <div class="h3">14 วันล่าสุด</div>
-            <BarChart data={rep.daily.map((d) => ({ key: d.key, label: fmtShortDate(d.key), value: d.done }))} unit="รอบ" title="รอบที่ครบแต่ละวัน" tone="var(--accent)" labelLast />
-          </Glass>
-
-          <Glass class="pad stack-sm">
-            <div class="h3">คุณภาพการโฟกัส · 30 วัน</div>
-            <div class="list">
-              <Row k="ทำครบรอบ" v={pct(q.rate)} sub={`จาก ${q.rounds} รอบที่เริ่ม (ไม่นับรอบที่สั้นกว่า 1 นาที)`} />
-              <Row k="หยุดชั่วคราวต่อรอบ" v={`${one(q.pausesPerRound)} ครั้ง`} sub={`เฉลี่ย ${one(q.pausedMinPerRound)} นาทีต่อรอบ`} />
-              <Row k="รอบที่ไม่หยุดเลย" v={pct(q.noPauseShare)} />
-              <Row k="พักครบเวลา" v={pct(q.restsFullShare)} sub="ไม่ข้ามพักและไม่จบพักก่อน" />
-              <Row k="กลับมาเริ่มรอบถัดไปหลังพักจบ" v={q.backMedianMin == null ? '–' : `${one(q.backMedianMin)} นาที`} sub="ค่ากลาง (มัธยฐาน) ของวันเดียวกัน" />
-              <Row k="เวลาโฟกัสต่อวันที่ได้ทำ" v={q.focusMinPerActiveDay == null ? '–' : `${Math.round(q.focusMinPerActiveDay)} นาที`} />
+            <div class="tiles two">
+              <Kpi k="รอบที่ครบ" v={`${pf.cur.done} รอบ`} now={pf.cur.done} before={cmp?.done} fmt={(n) => `${Math.round(n)} รอบ`} />
+              <Kpi k="เวลาโฟกัส" v={hrs(pf.cur.focusSec / 60)} now={pf.cur.focusSec / 60} before={cmp ? cmp.focusSec / 60 : undefined} fmt={hrs} />
+              <Kpi k="ทำครบรอบ" v={pct(pf.cur.rate)} now={pf.cur.rate != null ? pf.cur.rate * 100 : undefined} before={cmp?.rate != null ? cmp.rate * 100 : undefined} fmt={(n) => `${Math.round(n)}%`} />
+              {period.kind === 'day' ? (
+                <Kpi k="ครบติดกันมากที่สุด" v={`${pf.longestChain.n} รอบ`} fmt={(n) => `${n} รอบ`} />
+              ) : (
+                <Kpi k="วันที่ได้ทำ" v={`${pf.cur.activeDays}/${pf.curDays} วัน`} now={pf.cur.activeDays} before={cmp?.activeDays} beforeText={cmp ? `${cmp.activeDays}/${pf.prevDays} วัน` : undefined} fmt={(n) => `${n} วัน`} />
+              )}
             </div>
+            {period.prev && !cmp && <div class="tiny">ยังไม่มีบันทึกใน{period.prev.name} จึงยังไม่มีตัวเลขให้เทียบ</div>}
           </Glass>
 
-          <Glass class="pad stack-sm">
-            <div class="h3">ช่วงเวลาที่ทำครบ</div>
-            <BarChart data={rep.byHour.map((v, h) => ({ key: String(h), label: `${pad(h)}:00`, value: v }))} unit="รอบ" title="รอบที่ครบ แยกตามชั่วโมงที่เริ่ม" tone="var(--accent)" />
-            <BarChart data={rep.byWeekday.map((d) => ({ key: d.label, label: d.label, value: Math.round(d.avg * 10) / 10 }))} unit="รอบ/วัน" title="เฉลี่ยรอบที่ครบต่อวัน แยกตามวันในสัปดาห์" tone="var(--a-growth)" />
-          </Glass>
+          {pf.cur.done + pf.cur.stopped === 0 ? (
+            <Glass><Empty title={`ไม่มีรอบโฟกัสใน${period.title}`} body="เลือกช่วงอื่นด้านบน หรือเริ่มโฟกัสรอบใหม่" /></Glass>
+          ) : (
+            <>
+              <Glass class="pad stack-sm">
+                <div class="h3">รอบที่ครบแต่ละ{unitName}</div>
+                <BarChart
+                  data={pf.buckets.map((x) => ({
+                    key: x.b.key,
+                    label: x.b.label,
+                    tick: x.b.tick,
+                    value: x.b.future ? undefined : x.done,
+                    sub: `โฟกัส ${fmtDuration(x.focusSec / 60)}${x.stopped ? ` · หยุดก่อนครบ ${x.stopped}` : ''}`,
+                  }))}
+                  unit="รอบ"
+                  title={`รอบที่ครบแต่ละ${unitName} ${period.title}`}
+                  tone="var(--accent)"
+                  every={every}
+                  labelLast
+                  guide={pf.prevAvg != null && period.prev ? { value: Math.round(pf.prevAvg * 10) / 10, label: `เฉลี่ยต่อ${unitName}ของ${period.prev.name} ${one(pf.prevAvg)} รอบ` } : undefined}
+                />
+                <div class="tiny">แตะแท่งเพื่อดูเวลาโฟกัสและรอบที่หยุดก่อนครบ</div>
+              </Glass>
 
-          <Glass class="pad stack-sm">
-            <div class="h3">12 สัปดาห์</div>
-            <HeatMap data={rep.heat} unit="นาที" title="นาทีโฟกัสแต่ละวัน" tone="var(--accent)" />
-          </Glass>
+              <Glass class="pad stack-sm">
+                <div class="h3">คุณภาพการโฟกัส · {period.title}</div>
+                <div class="list">
+                  <Row k="ทำครบรอบ" v={pct(q.rate)} sub={`จาก ${q.rounds} รอบที่เริ่ม (ไม่นับรอบที่สั้นกว่า 1 นาที)`} />
+                  <Row k="หยุดชั่วคราวต่อรอบ" v={`${one(q.pausesPerRound)} ครั้ง`} sub={`เฉลี่ย ${one(q.pausedMinPerRound)} นาทีต่อรอบ`} />
+                  <Row k="รอบที่ไม่หยุดเลย" v={pct(q.noPauseShare)} />
+                  <Row k="พักครบเวลา" v={pct(q.restsFullShare)} sub="ไม่ข้ามพักและไม่จบพักก่อน" />
+                  <Row k="กลับมาเริ่มรอบถัดไปหลังพักจบ" v={q.backMedianMin == null ? '–' : `${one(q.backMedianMin)} นาที`} sub="ค่ากลาง (มัธยฐาน) ของวันเดียวกัน" />
+                  <Row k="เวลาโฟกัสต่อวันที่ได้ทำ" v={q.focusMinPerActiveDay == null ? '–' : fmtDuration(q.focusMinPerActiveDay)} />
+                </div>
+              </Glass>
 
-          {(rep.byArea.length > 0 || rep.byTask.length > 0) && (
-            <Glass class="pad stack-sm">
-              <div class="h3">ทำอะไรไปบ้าง · 30 วัน</div>
-              <div class="list">
-                {rep.byArea.map((a) => <Row key={a.label} k={a.label} v={`${mins(a.focusSec)} นาที`} sub={`ครบ ${a.done} รอบ`} />)}
-              </div>
-              {rep.byTask.length > 0 && <div class="tiny">งานที่ใช้เวลามากที่สุด</div>}
-              <div class="list">
-                {rep.byTask.map((t) => <Row key={t.label} k={t.label} v={`${mins(t.focusSec)} นาที`} sub={`ครบ ${t.done} · หยุดก่อนครบ ${t.stopped}`} />)}
-              </div>
-            </Glass>
+              {period.kind !== 'day' && (
+                <Glass class="pad stack-sm">
+                  <div class="h3">ช่วงเวลาที่ทำครบ · {period.title}</div>
+                  <div class="tiny">รอบที่ครบ แยกตามชั่วโมงที่เริ่ม</div>
+                  <BarChart data={hours.map((h) => ({ key: String(h), label: `${pad(h)}:00–${pad((h + 1) % 24)}:00`, tick: pad(h), value: pf.byHour[h] }))} unit="รอบ" title="รอบที่ครบ แยกตามชั่วโมงที่เริ่ม" tone="var(--accent)" every={6} />
+                  {pf.curDays >= 14 && (
+                    <>
+                      <div class="tiny">รอบที่ครบเฉลี่ยต่อวัน แยกตามวันในสัปดาห์</div>
+                      <BarChart data={pf.byWeekday.map((d) => ({ key: d.label, label: d.label, value: Math.round(d.avg * 10) / 10 }))} unit="รอบ/วัน" title="เฉลี่ยรอบที่ครบต่อวัน แยกตามวันในสัปดาห์" tone="var(--accent)" every={1} />
+                    </>
+                  )}
+                </Glass>
+              )}
+
+              {pf.heat.length > 0 && (
+                <Glass class="pad stack-sm">
+                  <div class="h3">นาทีโฟกัสแต่ละวัน · {period.title}</div>
+                  <HeatMap data={pf.heat} unit="นาที" title="นาทีโฟกัสแต่ละวัน" tone="var(--accent)" />
+                  <div class="tiny">ยิ่งเข้มยิ่งโฟกัสนาน แตะช่องเพื่อดูตัวเลข</div>
+                </Glass>
+              )}
+
+              {(pf.byArea.length > 0 || pf.byTask.length > 0) && (
+                <Glass class="pad stack-sm">
+                  <div class="h3">ทำอะไรไปบ้าง · {period.title}</div>
+                  <div class="list">
+                    {pf.byArea.map((a) => <Row key={a.label} k={a.label} v={fmtDuration(a.focusSec / 60)} sub={`ครบ ${a.done} รอบ`} />)}
+                  </div>
+                  {pf.byTask.length > 0 && <div class="tiny">งานที่ใช้เวลามากที่สุด</div>}
+                  <div class="list">
+                    {pf.byTask.map((t) => <Row key={t.label} k={t.label} v={fmtDuration(t.focusSec / 60)} sub={`ครบ ${t.done} · หยุดก่อนครบ ${t.stopped}`} />)}
+                  </div>
+                </Glass>
+              )}
+
+              {period.kind !== 'day' && <PeriodRecords pf={pf} title={period.title} />}
+              <Log key={`${period.from}:${period.to}`} rows={pf.rows} tasks={s.tasks} />
+            </>
           )}
-
-          <Records rep={rep} />
-          <Log rows={rep.rows} tasks={s.tasks} />
 
           <button class="btn block" onClick={exportCsv}>{I.download({ size: 18 })} ดาวน์โหลดทุกรอบเป็นไฟล์ตาราง (CSV)</button>
           <div class="tiny">
-            นิยาม: รอบครบ = นับเวลาจนหมดตามแผน · หยุดก่อนครบ = กดจบเองหรือกดพักเลย (รอบโฟกัสที่สั้นกว่า 1 นาทีไม่บันทึก) · ครบติดกัน = รอบถัดไปเริ่มภายใน {f.rest + 5} นาทีหลังรอบก่อนจบ · เวลาที่นับไม่รวมช่วงหยุดชั่วคราว
+            นิยาม: รอบครบ = นับเวลาจนหมดตามแผน · หยุดก่อนครบ = กดจบเองหรือกดพักเลย (รอบโฟกัสที่สั้นกว่า 1 นาทีไม่บันทึก) · ครบติดกัน = รอบถัดไปเริ่มภายใน {f.rest + 5} นาทีหลังรอบก่อนจบ · เวลาที่นับไม่รวมช่วงหยุดชั่วคราว · ช่วงที่ยังไม่จบเทียบกับช่วงก่อนหน้าถึงเวลาเดียวกัน · วันก่อนเริ่มใช้แอปไม่นับ
           </div>
         </>
       )}

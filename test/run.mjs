@@ -21,7 +21,7 @@ if (existsSync('seed/private/plan.mjs')) ({ plan, shop } = await import('../seed
 if (plan) seed['cfg/plan'] = plan;
 for (const s of shop) seed['shop/' + s.id] = s;
 seed['tasks/t1'] = { id: 't1', title: 'ตรวจสต็อกกิมจิและสั่งของ', area: 'seoulful', impact: 3, status: 'todo', createdAt: Date.now() - 3 * 86400000, due: key(now), estimateMin: 25 };
-seed['tasks/t2'] = { id: 't2', title: 'จองหมอผิวหนังเรื่อง microneedling', area: 'health', impact: 2, status: 'todo', createdAt: Date.now() - 86400000, estimateMin: 10 };
+seed['tasks/t2'] = { id: 't2', title: 'จองช่างล้างแอร์', area: 'home', impact: 2, status: 'todo', createdAt: Date.now() - 86400000, estimateMin: 10 };
 seed['tasks/t3'] = { id: 't3', title: 'สูตรโคชูจังให้รสคงที่', area: 'seoulful', impact: 3, status: 'waiting', waitingOn: 'เชฟนุ่น', followUpAt: Date.now() - 3600000, createdAt: Date.now() - 5 * 86400000 };
 const months = {};
 for (let i = 1; i <= 20; i++) {
@@ -32,6 +32,26 @@ for (let i = 1; i <= 20; i++) {
   months[m].days[k] = { checks: { 'lights-out': i % 3 ? Date.now() : null, water: Date.now() } };
   months[m].breath['b' + i] = { start: d.getTime(), minutes: 10 + (i % 4) * 5, preset: 'daily' };
   if (i % 2) months[m].workouts['w' + i] = { start: d.getTime(), end: d.getTime() + 2700000, program: 'A', exercises: { pushup: [{ reps: 12 + (i % 4), level: 3 }] } };
+}
+// รอบโฟกัสย้อนหลัง 40 วัน ให้หน้าสถิติมีหลายสัปดาห์ไว้เทียบ (วันละ 0–6 รอบ บางรอบหยุดก่อนครบ มีพักหลังทุกรอบ)
+let seedRounds = 0;
+const seedFull = {};
+for (let i = 1; i <= 40; i++) {
+  const d = new Date(now.getTime() - i * 86400000);
+  d.setHours(10, 0, 0, 0);
+  const k = key(d);
+  const m = k.slice(0, 7);
+  months[m] ||= { month: m, days: {}, focus: {}, workouts: {}, breath: {} };
+  const n = [0, 2, 4, 6, 3, 5, 1][i % 7];
+  for (let j = 0; j < n; j++) {
+    const start = d.getTime() + j * 1800000;
+    const cut = j === 2 && i % 5 === 0;
+    const active = cut ? 900 : 1500;
+    months[m].focus['w' + start] = { start, end: start + active * 1000, minutes: active / 60, kind: 'work', plannedSec: 1500, activeSec: active, completed: !cut, endedBy: cut ? 'stop' : 'timer', pauses: [], pausedSec: 0 };
+    months[m].focus['b' + (start + 1500000)] = { start: start + 1500000, end: start + 1800000, minutes: 5, kind: 'break', plannedSec: 300, activeSec: 300, completed: true, endedBy: 'timer', pauses: [], pausedSec: 0 };
+    seedRounds += 2;
+    if (!cut) seedFull[k] = (seedFull[k] || 0) + 1;
+  }
 }
 for (const [m, v] of Object.entries(months)) seed['logs/' + m] = v;
 seed['digests/' + key(now)] = { date: key(now), items: { e1: { id: 'e1', kind: 'email', title: 'ใบแจ้งหนี้ซัพพลายเออร์ครบกำหนด', body: 'กิมจิ 12,400 บาท', source: 'Company inbox', priority: 'high' }, r1: { id: 'r1', kind: 'review', title: 'รีวิว Google Maps ใหม่ 5★', body: 'ต๊อกบกกีอร่อยมาก', source: 'Google Maps', rating: 5 }, n1: { id: 'n1', kind: 'news', title: 'SET แจ้งเตือน AKS เรื่องกรรมการตรวจสอบ', source: 'SET' } } };
@@ -99,7 +119,7 @@ await page.click('.tab:has-text("งาน")');
 await page.waitForTimeout(300);
 await page.screenshot({ path: 'test/out/04-tasks.png', fullPage: true });
 await noOverflow(page, 'tasks');
-await page.click('.item:has-text("จองหมอผิวหนัง") .check');
+await page.click('.item:has-text("จองช่างล้างแอร์") .check');
 await page.waitForTimeout(300);
 await check(page.evaluate(() => window.__docs.get('tasks/t2')?.status === 'done'), 'completing a task marks it done');
 await page.click('.seg button:has-text("รอคนอื่น")');
@@ -175,6 +195,24 @@ for (const [name, label] of HUB) {
     const sheet = await page.locator('.sheet').innerText();
     await check(sheet.includes('ดีที่สุดตลอดกาล') && sheet.includes('7 วันล่าสุด เทียบ 7 วันก่อนหน้า'), 'metric sheet shows averages and all-time best');
     await page.click('.sheet button[aria-label="ปิด"]');
+    await page.waitForTimeout(200);    // เลือกสัปดาห์: ตัวชี้วัดรวมตามช่วงและเทียบกับสัปดาห์ก่อนหน้า แล้วเปิดกราฟของตัวหนึ่ง
+    await page.click('#progress-range button:text-is("สัปดาห์")');
+    await page.waitForTimeout(300);
+    const wt = await page.locator('.screen').last().innerText();
+    await check(wt.includes('เทียบสัปดาห์ก่อนหน้า') && wt.includes('คืนที่ปิดไฟตรงเวลา') && wt.includes('รวมทั้งช่วง') && wt.includes('Pomodoro ที่ครบ'), 'สถิติรวมเลือกสัปดาห์ได้และเทียบกับสัปดาห์ก่อนหน้า');
+    await page.screenshot({ path: 'test/out/36-progress-week.png', fullPage: true });
+    await noOverflow(page, 'progress week');
+    await page.click('.item:has-text("Pomodoro ที่ครบ")');
+    await page.waitForTimeout(300);
+    const ps = await page.locator('.sheet').innerText();
+    await check(ps.includes('ดีที่สุดตลอดกาล (ต่อวัน)') && ps.includes('สัปดาห์นี้'), 'กราฟของตัวชี้วัดแสดงตามช่วงที่เลือก');
+    await page.screenshot({ path: 'test/out/37-progress-week-sheet.png' });
+    await page.click('.sheet button[aria-label="ปิด"]');
+    await page.waitForTimeout(200);
+    await page.click('#progress-range button:text-is("ปี")');
+    await page.waitForTimeout(300);
+    await noOverflow(page, 'progress year');
+    await page.click('#progress-range button:text-is("วัน")');
     await page.waitForTimeout(200);
   }
   if (name === 'markets') {
@@ -265,7 +303,34 @@ for (const [name, label] of HUB) {
   await check(txt.includes('บันทึกทุกรอบ') && txt.includes('หยุดก่อนครบ') && txt.includes('หยุดเพื่อพัก') && txt.includes('คุณภาพการโฟกัส'), 'stats page shows the log and quality');
   await pp.click('button:has-text("ดาวน์โหลดทุกรอบ")');
   await pp.waitForTimeout(300);
-  await check(pp.evaluate(() => { const d = Object.values(window.__downloadData || {})[0] || ''; return d.split('\r\n').length === 7 && d.includes('กดจบก่อน') && d.includes('หยุดเพื่อพัก') && d.includes('ครบเวลา'); }), 'CSV export holds every round');
+  await check(pp.evaluate((extra) => { const d = Object.values(window.__downloadData || {})[0] || ''; return d.split('\r\n').length === 7 + extra && d.includes('กดจบก่อน') && d.includes('หยุดเพื่อพัก') && d.includes('ครบเวลา'); }, seedRounds), 'CSV export holds every round');
+  // ช่วงเวลา: เริ่มที่สัปดาห์ แล้วลองทั้งหมด เดือน ย้อนเดือนก่อน และกำหนดเอง
+  const kpi = () => pp.locator('.kpi .v').first().innerText().then((t) => t.trim());
+  const addK = (k, n) => { const [y, mo, d] = k.split('-').map(Number); return key(new Date(y, mo - 1, d + n, 12)); };
+  await check(pp.locator('#focus-range button.on').innerText().then((t) => t.trim() === 'สัปดาห์'), 'หน้าสถิติโฟกัสเริ่มที่สัปดาห์นี้');
+  await pp.click('#focus-range button:text-is("ทั้งหมด")');
+  await pp.waitForTimeout(300);
+  const allFull = Object.values(seedFull).reduce((a, b) => a + b, 0) + 1;
+  await check(kpi().then((t) => t === `${allFull} รอบ`), 'ช่วงทั้งหมดนับรอบที่ครบตรงกับบันทึก');
+  await pp.click('#focus-range button:text-is("เดือน")');
+  await pp.waitForTimeout(300);
+  await pp.screenshot({ path: 'test/out/34-focus-month.png', fullPage: true });
+  await noOverflow(pp, 'focus month');
+  await check(pp.locator('.screen').last().innerText().then((t) => t.includes('เดือนนี้') && t.includes('เทียบเดือนก่อนหน้า')), 'เดือนนี้เทียบกับเดือนก่อนหน้า');
+  await pp.click('button[aria-label="ช่วงก่อนหน้า"]');
+  await pp.waitForTimeout(300);
+  await check(pp.locator('.rangenav .h3').innerText().then((t) => t.trim() !== 'เดือนนี้'), 'ย้อนไปดูเดือนก่อนได้');
+  await pp.click('#focus-range button:text-is("กำหนดเอง")');
+  await pp.waitForTimeout(300);
+  const todayK = await pp.getAttribute('#focus-range-to', 'max');
+  await pp.fill('#focus-range-from', addK(todayK, -6));
+  await pp.fill('#focus-range-to', todayK);
+  await pp.waitForTimeout(300);
+  let want = 1;
+  for (let i = 1; i <= 6; i++) want += seedFull[addK(todayK, -i)] || 0;
+  await check(kpi().then((t) => t === `${want} รอบ`), 'กำหนดช่วง 7 วันเองได้ และนับรอบตรง');
+  await pp.screenshot({ path: 'test/out/35-focus-custom.png' });
+  await noOverflow(pp, 'focus custom');
 }
 
 // light theme and small phone
