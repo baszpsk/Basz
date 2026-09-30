@@ -11,7 +11,7 @@ export const DEFAULT_SETTINGS: Settings = {
   workoutTime: '13:00',
   workoutDays: [1, 3, 5],
   rolloverHour: 6,
-  focus: { work: 25, rest: 5, autoBreak: true },
+  focus: { work: 25, rest: 5, autoBreak: true, longRest: 15, longEvery: 4 },
   coffeeCutoff: '13:00',
   dryHours: 8,
   proteinTarget: 110,

@@ -326,7 +326,7 @@ export function focusCsv(rows: Round[], tasks: Record<string, Task>): string {
     [
       r.id,
       r.day,
-      r.kind === 'work' ? 'โฟกัส' : 'พัก',
+      r.kind === 'work' ? 'โฟกัส' : r.long ? 'พักยาว' : 'พัก',
       stamp(r.start),
       stamp(r.end),
       r.plannedSec != null ? (r.plannedSec / 60).toFixed(1) : '',

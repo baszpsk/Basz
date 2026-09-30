@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { BarChart, Spark } from '../components/charts';
 import { I } from '../components/icons';
 import { RangeBar, useRange } from '../components/range';
-import { burstFrom, Check, CountUp, Delta, Empty, Glass, PageHead, Pill, Seg, Sheet, toast } from '../components/ui';
+import { burstFrom, Check, CountUp, Delta, Empty, Glass, PageHead, Pill, Seg, Sheet, Stepper, toast } from '../components/ui';
 import { FABRICS, LOADS, MACHINE_CARE, SMELL_FIX } from '../content/laundry';
 import { markSeen, newTask, saveMeta, saveSettings, saveShop, saveTask, setCycleMinutes, startLaundry } from '../lib/actions';
 import { coach, copyForError, sampleCap } from '../lib/ai';
@@ -811,6 +811,17 @@ function SettingsPage(props: { back: () => void }) {
         {days('tradingDays', 'วันเทรด')}
       </Glass>
       <Glass class="pad stack">
+        <div class="h3">Pomodoro</div>
+        <div class="row between"><span class="sub">โฟกัส (นาที)</span><Stepper label="นาทีโฟกัส" value={st.focus.work} min={10} max={90} step={5} onChange={(v) => saveSettings({ focus: { ...st.focus, work: v } })} /></div>
+        <div class="row between"><span class="sub">พัก (นาที)</span><Stepper label="นาทีพัก" value={st.focus.rest} min={3} max={15} onChange={(v) => saveSettings({ focus: { ...st.focus, rest: v } })} /></div>
+        <div class="row between"><span class="sub">พักยาว (นาที)</span><Stepper label="นาทีพักยาว" value={st.focus.longRest ?? 15} min={10} max={30} step={5} onChange={(v) => saveSettings({ focus: { ...st.focus, longRest: v } })} /></div>
+        <div class="row between"><span class="sub">พักยาวหลังครบ (รอบ)</span><Stepper label="จำนวนรอบก่อนพักยาว" value={st.focus.longEvery ?? 4} min={2} max={6} onChange={(v) => saveSettings({ focus: { ...st.focus, longEvery: v } })} /></div>
+        <button class={`chip ${st.focus.autoBreak ? 'on' : ''}`} aria-pressed={st.focus.autoBreak} style={{ alignSelf: 'flex-start' }} onClick={() => saveSettings({ focus: { ...st.focus, autoBreak: !st.focus.autoBreak } })}>
+          เริ่มพักเองเมื่อครบรอบ
+        </button>
+        <div class="tiny">ค่าเริ่มต้น 25/5 และพักยาว 15 นาทีหลังครบ 4 รอบ ยังไม่มีงานทดลองที่พบว่าความยาวรอบแบบอื่นได้งานมากกว่า ส่วนพักยาวมาจากกติกาต้นฉบับและหลักฐานทางอ้อม ค่าใหม่มีผลตั้งแต่รอบถัดไป</div>
+      </Glass>
+      <Glass class="pad stack">
         <div class="h3">ข้อมูลของคุณ</div>
         <div class="row between">
           <span class="sub">ซิงก์ขึ้นคลาวด์</span>
@@ -868,7 +879,7 @@ export function HubScreen(props: { nav: Nav; page: HubPage | null; setPage: (p: 
               <span class="ic">{t.icon({ size: 20 })}</span>
               {!!counts[t.id] && <Pill tone={t.tone}>{counts[t.id]}</Pill>}
             </div>
-            <div><div class="h3">{t.name}</div><div class="tiny">{t.sub}</div></div>
+            <div><div class="h3">{t.id === 'focus' ? `โฟกัส ${s.settings.focus.work}/${s.settings.focus.rest}` : t.name}</div><div class="tiny">{t.sub}</div></div>
           </button>
         ))}
       </div>

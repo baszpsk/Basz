@@ -41,7 +41,15 @@ export interface Settings {
   workoutDays: number[];
   rolloverHour: number;
   /** Pomodoro: minutes of focus, minutes of rest, and whether the rest starts by itself. */
-  focus: { work: number; rest: number; autoBreak: boolean };
+  focus: {
+    work: number;
+    rest: number;
+    autoBreak: boolean;
+    /** นาทีของพักยาว */
+    longRest?: number;
+    /** พักยาวหลังครบกี่รอบ */
+    longEvery?: number;
+  };
   coffeeCutoff: string;
   dryHours: number;
   proteinTarget: number;
@@ -69,6 +77,8 @@ export interface Plan {
   links: { id: string; label: string; url: string; kind: 'maps' | 'delivery' | 'booking' }[];
   profile: { name: string; birth: string; heightCm: number; weightKg: number };
   notes?: string;
+  /** คำแนะนำที่ขึ้นระหว่างพักของ Pomodoro: พักสั้น พักยาว และพักที่ตรงกับช่วงหลังอาหาร */
+  breakTips?: { short?: string[]; long?: string[]; afterMeal?: string[] };
 }
 
 export interface DayLog {
@@ -98,6 +108,8 @@ export interface FocusSession {
   completed?: boolean;
   /** timer = ครบเวลา · stop = กดจบก่อน · skip = ตัดพักเพื่อเริ่มรอบต่อไป · break = ตัดโฟกัสเพื่อไปพักทันที */
   endedBy?: 'timer' | 'stop' | 'skip' | 'break';
+  /** พักยาวหลังครบชุด */
+  long?: boolean;
   pauses?: { s: number; e: number }[];
   pausedSec?: number;
 }
@@ -118,6 +130,12 @@ export interface Pomo {
   taskId: string | null;
   label: string | null;
   area: Area | null;
+  /** รอบที่ครบในชุดนี้ นับไปจนถึงพักยาว */
+  set?: number;
+  /** เวลาที่รอบล่าสุดจบ ใช้ตัดสินว่าเริ่มชุดใหม่ไหม */
+  lastEnd?: number | null;
+  /** ช่วงพักนี้เป็นพักยาว */
+  long?: boolean;
 }
 
 export interface SetLog { reps?: number; seconds?: number; level: number }

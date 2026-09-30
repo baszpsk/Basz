@@ -17,8 +17,7 @@ import * as P from '../lib/pomodoro';
 import { AREA_LABEL, rankTasks } from '../lib/priority';
 import { periodOf } from '../lib/range';
 import { sound } from '../lib/sound';
-import { store } from '../lib/store';
-import { fmtClock, fmtDuration, fmtShortDate, pad, todayKey } from '../lib/time';
+import { fmtClock, fmtDuration, fmtShortDate, logicalMinutes, pad, parseHM, todayKey } from '../lib/time';
 import type { Pomo, Task } from '../lib/types';
 
 const hm = (ms: number) => {
@@ -42,9 +41,12 @@ export function usePomodoroClock() {
     const tick = () => {
       const done = P.sync();
       if (!done.length || document.visibilityState !== 'visible') return;
-      const f = store.s.settings.focus;
+      const f = P.focusCfg();
+      const next = P.current();
       sound.chime();
-      toast(done[done.length - 1] === 'work' ? (f.autoBreak ? `ครบ ${f.work} นาที · พัก ${f.rest} นาที` : `ครบ ${f.work} นาที`) : 'พักครบแล้ว เริ่มรอบต่อไปได้');
+      if (done[done.length - 1] !== 'work') toast('พักครบแล้ว เริ่มรอบต่อไปได้');
+      else if (next.phase === 'break') toast(next.long ? `ครบ ${f.longEvery} รอบ · พักยาว ${f.longRest} นาที` : `ครบ ${f.work} นาที · พัก ${f.rest} นาที`);
+      else toast(`ครบ ${f.work} นาที`);
     };
     tick();
     const id = window.setInterval(tick, 1000);
@@ -81,7 +83,8 @@ export function usePomodoroClock() {
 function phaseLabel(p: Pomo) {
   if (p.phase === 'idle') return 'พร้อมเริ่ม';
   if (p.phase === 'work') return p.running ? 'โฟกัส' : 'หยุดชั่วคราว';
-  return p.running ? 'พัก' : 'หยุดพักชั่วคราว';
+  if (!p.running) return 'หยุดพักชั่วคราว';
+  return p.long ? 'พักยาว' : 'พัก';
 }
 
 /** Small pill above the tab bar while a round is on. */
@@ -100,15 +103,24 @@ export function FocusBar(props: { hidden: boolean; onOpen: () => void }) {
   );
 }
 
-function TodayDots(props: { rows: Round[]; today: string }) {
-  const works = props.rows.filter((r) => r.kind === 'work' && r.day === props.today);
-  if (!works.length) return null;
+/** ความคืบหน้าของชุด: จุดเต็มคือรอบที่ครบแล้ว ครบทุกจุดได้พักยาว */
+function SetDots(props: { set: number; every: number; longRest: number; resting: boolean }) {
+  const n = Math.min(props.set, props.every);
   return (
-    <div class="pomo-dots" role="img" aria-label={`วันนี้ครบ ${works.filter(isFull).length} รอบ หยุดก่อนครบ ${works.filter((r) => !isFull(r)).length} รอบ`}>
-      {works.map((r) => <span key={r.id} class={isFull(r) ? 'on' : ''} />)}
+    <div class="row" style={{ gap: '8px', justifyContent: 'center' }}>
+      <div class="pomo-dots" role="img" aria-label={`ชุดนี้ครบ ${n} จาก ${props.every} รอบ`}>
+        {Array.from({ length: props.every }, (_, i) => <span key={i} class={i < n ? 'on' : ''} />)}
+      </div>
+      <span class="tiny">{props.resting ? `ครบชุด · พักยาว ${props.longRest} นาที` : `อีก ${props.every - n} รอบได้พักยาว ${props.longRest} นาที`}</span>
     </div>
   );
 }
+
+/** คำแนะนำระหว่างพักเมื่อแผนยังไม่มี (ใช้ได้กับทุกคน) */
+const TIPS = {
+  short: ['ลุกจากเก้าอี้ เดินหรือขยับเบาๆ และมองไกลจากจอ', 'วางมือถือไว้ก่อน ไม่เลื่อนดูโซเชียลระหว่างพัก'],
+  long: ['เดินออกนอกห้องหรือนั่งผ่อนคลาย ให้ครบเวลาพักยาว', 'ดื่มน้ำ ไม่ต้องหาขนมหวานมาเติมพลัง'],
+};
 
 export function FocusSheet(props: { open: boolean; onClose: () => void; nav: Nav }) {
   const s = useStore();
@@ -121,6 +133,16 @@ export function FocusSheet(props: { open: boolean; onClose: () => void; nav: Nav
   const today = todayKey(now, R);
   const minute = Math.floor(now.getTime() / 60000);
   const rep = useMemo(() => focusReport(s.logs, R, f.rest, today, now), [s.logs, today, minute]);
+  const longRest = f.longRest ?? 15;
+  const longEvery = f.longEvery ?? 4;
+  // ช่วงพักที่ตรงกับ 3 ชั่วโมงหลังมื้ออาหาร ใช้คำแนะนำพักหลังอาหารจากแผนก่อน
+  const lm = logicalMinutes(now, R);
+  const afterMeal = [s.settings.meal1, s.settings.meal2].some((m) => {
+    const x = parseHM(m, R);
+    return lm >= x && lm <= x + 180;
+  });
+  const bt = s.plan?.breakTips;
+  const tips = p.phase === 'break' ? [...(afterMeal ? bt?.afterMeal || [] : []), ...((p.long ? bt?.long || TIPS.long : bt?.short || TIPS.short))].slice(0, 3) : [];
   const ranked = useMemo(() => rankTasks(Object.values(s.tasks), now.getTime(), today, R).slice(0, 4), [s.tasks, today, minute]);
   useEffect(() => {
     if (!confirm) return;
@@ -168,7 +190,7 @@ export function FocusSheet(props: { open: boolean; onClose: () => void; nav: Nav
             <div class="eyebrow">{phaseLabel(p)}</div>
             <div class="display-num" style={{ fontSize: '52px', lineHeight: 1.05 }}>{fmtClock(left)}</div>
             <div class="tiny">
-              {p.phase === 'idle' ? `โฟกัส ${f.work} · พัก ${f.rest} นาที` : ends ? (p.phase === 'work' ? `ครบเวลา ${hm(ends)}` : `พักถึง ${hm(ends)}`) : openPause ? `หยุดมา ${mins((now.getTime() - openPause.s) / 1000)} นาที` : ''}
+              {p.phase === 'idle' ? `โฟกัส ${f.work} · พัก ${f.rest} · พักยาว ${longRest} นาที` : ends ? (p.phase === 'work' ? `ครบเวลา ${hm(ends)}` : `พักถึง ${hm(ends)}`) : openPause ? `หยุดมา ${mins((now.getTime() - openPause.s) / 1000)} นาที` : ''}
             </div>
           </div>
         </Ring>
@@ -177,7 +199,7 @@ export function FocusSheet(props: { open: boolean; onClose: () => void; nav: Nav
           วันนี้ครบ <b class="num">{rep.today.done}</b> รอบ · โฟกัส <b class="num">{mins(rep.today.focusSec)}</b> นาที
           {rep.today.stopped > 0 && <> · หยุดก่อนครบ <b class="num">{rep.today.stopped}</b></>}
         </div>
-        <TodayDots rows={rep.rows} today={today} />
+        <SetDots set={p.phase === 'break' && p.long ? longEvery : p.set || 0} every={longEvery} longRest={longRest} resting={p.phase === 'break' && !!p.long} />
 
         <div class="row wrap" style={{ gap: '8px', justifyContent: 'center' }}>
           {p.phase === 'idle' && (
@@ -201,6 +223,18 @@ export function FocusSheet(props: { open: boolean; onClose: () => void; nav: Nav
             <button class={`btn ${confirm === 'stop' ? 'danger' : ''}`} id="pomo-stop" onClick={stop}>{I.stop({ size: 18 })} {p.phase === 'break' ? 'จบพัก' : confirm === 'stop' ? 'แตะอีกครั้งเพื่อจบก่อนครบ' : 'จบรอบนี้'}</button>
           )}
         </div>
+
+        {tips.length > 0 && (
+          <div class="card pad stack-sm" id="pomo-tips" style={{ width: '100%' }}>
+            <div class="tiny" style={{ fontWeight: 700 }}>{p.long ? 'พักยาวนี้' : 'ช่วงพักนี้'}</div>
+            {tips.map((t) => (
+              <div key={t} class="row" style={{ gap: '8px', alignItems: 'flex-start' }}>
+                <span style={{ color: 'var(--good)', marginTop: '2px' }}>{I.check({ size: 16 })}</span>
+                <span class="sub">{t}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div class="card pad stack-sm" style={{ width: '100%' }}>
           <div class="row between">
@@ -295,7 +329,7 @@ function Log(props: { rows: Round[]; tasks: Record<string, Task> }) {
             <div key={r.id} class="item" style={{ padding: '9px 2px' }}>
               <span style={{ color: r.kind === 'work' ? 'var(--accent)' : 'var(--good)' }}>{r.kind === 'work' ? I.focus({ size: 18 }) : I.moon({ size: 18 })}</span>
               <div class="grow">
-                <div class="t">{r.kind === 'work' ? 'โฟกัส' : 'พัก'} · {ended}</div>
+                <div class="t">{r.kind === 'work' ? 'โฟกัส' : r.long ? 'พักยาว' : 'พัก'} · {ended}</div>
                 <div class="d">
                   {fmtShortDate(r.day)} {hm(r.start)}–{hm(r.end)} · นับ {one(secOf(r) / 60)}/{r.plannedSec ? Math.round(r.plannedSec / 60) : '–'} นาที
                   {!!r.pauses?.length && ` · หยุดชั่วคราว ${r.pauses.length} ครั้ง ${one((r.pausedSec || 0) / 60)} นาที`}

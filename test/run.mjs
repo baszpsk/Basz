@@ -331,6 +331,27 @@ for (const [name, label] of HUB) {
   await check(kpi().then((t) => t === `${want} รอบ`), 'กำหนดช่วง 7 วันเองได้ และนับรอบตรง');
   await pp.screenshot({ path: 'test/out/35-focus-custom.png' });
   await noOverflow(pp, 'focus custom');
+  // พักยาว: ครบชุด 4 รอบแล้วพัก 15 นาทีเอง พร้อมคำแนะนำระหว่างพัก จบแล้วเริ่มนับชุดใหม่
+  await pp.click('.hero .btn.primary');
+  await pp.waitForSelector('#pomo-start');
+  for (let i = 0; i < 4; i++) {
+    await pp.click('#pomo-start');
+    await pp.clock.fastForward('25:01');
+    await pp.waitForTimeout(300);
+    const cur = await pomo();
+    if (cur?.phase === 'break' && cur.long) break;
+    await pp.clock.fastForward('05:01');
+    await pp.waitForTimeout(300);
+  }
+  await check(pomo().then((x) => x?.phase === 'break' && x.long === true && x.plannedSec === 900), 'ครบชุด 4 รอบแล้วได้พักยาว 15 นาทีเอง');
+  await check(pp.locator('#pomo-tips').isVisible(), 'ระหว่างพักมีคำแนะนำให้ลุกจากจอ');
+  await pp.screenshot({ path: 'test/out/38-pomodoro-long-break.png' });
+  await pp.clock.fastForward('15:01');
+  await pp.waitForTimeout(300);
+  await check(rounds().then((r) => r.some((x) => x.kind === 'break' && x.long === true && x.activeSec === 900)), 'พักยาวบันทึกไว้ครบ');
+  await check(pomo().then((x) => x?.phase === 'idle' && (x.set || 0) === 0), 'หลังพักยาวเริ่มนับชุดใหม่');
+  await pp.click('.sheet button[aria-label="ปิด"]');
+  await pp.waitForTimeout(200);
 }
 
 // light theme and small phone

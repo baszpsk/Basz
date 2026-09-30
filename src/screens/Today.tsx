@@ -82,13 +82,14 @@ function ItemList(props: { block: Block; checks: Record<string, number | null>; 
 }
 
 function ActionButton(props: { block: Block; nav: Nav; firstTask?: Task }) {
+  const f = useStore().settings.focus;
   const b = props.block;
   const n = props.nav;
   switch (b.action) {
     case 'focus':
       return (
         <>
-          <button class="btn primary" onClick={() => n.focus(props.firstTask, true)}>{I.play({ size: 18 })} เริ่มโฟกัส 25/5</button>
+          <button class="btn primary" onClick={() => n.focus(props.firstTask, true)}>{I.play({ size: 18 })} เริ่มโฟกัส {f.work}/{f.rest}</button>
           {props.firstTask && <button class="btn" onClick={() => n.task(props.firstTask!)}>{I.arrow({ size: 18 })} เปิดงาน</button>}
         </>
       );
@@ -421,7 +422,7 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
       <Timeline d={d} onOpen={setOpenBlock} />
 
       <div class="row wrap" style={{ gap: '8px', justifyContent: 'center' }}>
-        <button class="chip" onClick={() => props.nav.focus()}>{I.focus({ size: 14 })} โฟกัส 25/5</button>
+        <button class="chip" onClick={() => props.nav.focus()}>{I.focus({ size: 14 })} โฟกัส {s.settings.focus.work}/{s.settings.focus.rest}</button>
         <button
           class={`chip ${dayLog.nightOut ? 'on' : ''}`}
           onClick={() => {
