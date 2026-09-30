@@ -44,7 +44,7 @@ function TabBar(props: { tab: TabId; setTab: (t: TabId) => void; badges: Partial
   return (
     <nav class="tabbar" aria-label="เมนูหลัก">
       <div class="bar glass" ref={ref} role="tablist">
-        <span class={`blob ${moving ? 'moving' : ''}`} style={{ left: blob.left + 'px', width: blob.width + 'px' }} />
+        <span class={`blob ${moving ? 'moving' : ''}`} style={{ translate: `${blob.left}px 0`, width: blob.width + 'px' } as JSX.CSSProperties} />
         {TABS.map((t) => (
           <button key={t.id} data-tab={t.id} role="tab" aria-selected={props.tab === t.id} class={`tab ${props.tab === t.id ? 'on' : ''}`} onClick={() => props.setTab(t.id)}>
             {t.icon({ size: 22 })}

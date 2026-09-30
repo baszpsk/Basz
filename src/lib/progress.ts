@@ -64,6 +64,8 @@ export function buildMetrics(
   plan: Plan | null,
   today: string,
   now: Date = new Date(),
+  /** นับเฉพาะวันตั้งแต่วันนี้ขึ้นไป (หน้าที่ไม่ต้องใช้ประวัติทั้งหมดจะได้ไม่ช้าลงเมื่อใช้แอปนานขึ้น) */
+  since?: string,
 ): Metric[] {
   const R = settings.rolloverHour;
   const dayOf = (ts: number) => {
@@ -107,7 +109,7 @@ export function buildMetrics(
   }
   for (const t of Object.values(tasks)) if (t.status === 'done' && t.doneAt) at(dayOf(t.doneAt)).tasks += 1;
 
-  const keys = [...new Set([...dayLogs.keys(), ...agg.keys()])].filter((k) => k <= today).sort();
+  const keys = [...new Set([...dayLogs.keys(), ...agg.keys()])].filter((k) => k <= today && (!since || k >= since)).sort();
   const first = keys[0];
   const span: string[] = [];
   if (first) for (let k = first; k <= today; k = addDays(k, 1)) span.push(k);

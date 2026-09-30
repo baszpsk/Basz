@@ -141,7 +141,7 @@
   --series-2: #d95926;
 }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 html, body { height: 100%; }
 body {
   margin: 0;
@@ -165,18 +165,11 @@ button { cursor: pointer; }
   height: 95vmax;
   border-radius: 50%;
   opacity: var(--blob-alpha);
-  will-change: transform;
-  animation: drift 56s ease-in-out infinite alternate;
 }
 .sky .b1 { background: radial-gradient(circle, var(--b1) 0%, transparent 64%); left: -42vmax; top: -44vmax; }
-.sky .b2 { background: radial-gradient(circle, var(--b2) 0%, transparent 64%); right: -46vmax; top: -30vmax; animation-duration: 68s; animation-delay: -14s; }
-.sky .b3 { background: radial-gradient(circle, var(--b3) 0%, transparent 64%); left: -46vmax; top: 34vh; animation-duration: 76s; animation-delay: -32s; }
-.sky .b4 { background: radial-gradient(circle, var(--b4) 0%, transparent 64%); right: -48vmax; bottom: -50vmax; animation-duration: 62s; animation-delay: -22s; }
-@keyframes drift {
-  0% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(8vmax, 6vmax, 0) scale(1.12); }
-  100% { transform: translate3d(-5vmax, 10vmax, 0) scale(0.94); }
-}
+.sky .b2 { background: radial-gradient(circle, var(--b2) 0%, transparent 64%); right: -46vmax; top: -30vmax; }
+.sky .b3 { background: radial-gradient(circle, var(--b3) 0%, transparent 64%); left: -46vmax; top: 34vh; }
+.sky .b4 { background: radial-gradient(circle, var(--b4) 0%, transparent 64%); right: -48vmax; bottom: -50vmax; }
 .sky-scrim { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: var(--scrim); }
 /* claude.ai draws a white toolbar above the page in light mode. This band
    carries that white down into the page so the two read as one surface.
@@ -209,7 +202,7 @@ button { cursor: pointer; }
   gap: 14px;
 }
 /* Sections arrive one after another with a small spring. */
-.screen > :not(.sheet):not(.backdrop) { animation: rise 0.6s var(--spring) both; animation-delay: calc(var(--i, 0) * 45ms); }
+.screen > :not(.sheet):not(.backdrop) { animation: rise 0.26s var(--ease) both; animation-delay: calc(var(--i, 0) * 16ms); }
 .screen > :nth-child(2) { --i: 1; }
 .screen > :nth-child(3) { --i: 2; }
 .screen > :nth-child(4) { --i: 3; }
@@ -218,7 +211,7 @@ button { cursor: pointer; }
 .screen > :nth-child(7) { --i: 6; }
 .screen > :nth-child(8) { --i: 7; }
 .screen > :nth-child(n + 9) { --i: 8; }
-@keyframes rise { from { opacity: 0; transform: translateY(16px) scale(0.985); } to { opacity: 1; transform: none; } }
+@keyframes rise { from { opacity: 0.35; transform: translateY(8px) scale(0.992); } to { opacity: 1; transform: none; } }
 
 .topbar { display: flex; align-items: center; gap: 12px; padding-top: 4px; }
 .topbar .grow { flex: 1; min-width: 0; }
@@ -231,7 +224,7 @@ button { cursor: pointer; }
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: flow 7s ease-in-out infinite alternate;
+  animation: flow 1.4s var(--ease) both;
 }
 @keyframes flow { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
 .h2 { font-family: var(--font-display); font-weight: 700; font-size: 18px; letter-spacing: -0.005em; line-height: 1.35; margin: 0; }
@@ -304,7 +297,7 @@ button { cursor: pointer; }
   background:
     conic-gradient(from var(--spin), transparent 0deg, color-mix(in srgb, var(--tone, var(--accent)) 85%, white) 50deg, var(--rim) 80deg, transparent 120deg, transparent 360deg),
     linear-gradient(150deg, var(--rim), var(--rim-2) 32%, transparent 52%, var(--rim-2) 82%, var(--rim));
-  animation: spin 7s linear infinite;
+  animation: spin 1.6s var(--ease) both;
 }
 @keyframes spin { to { --spin: 360deg; } }
 .hero .clock { font-size: 44px; line-height: 1; }
@@ -359,10 +352,11 @@ button { cursor: pointer; }
   transition: transform 0.3s var(--spring); position: relative; flex: none;
 }
 .icon-btn:active { transform: scale(0.88); }
-.icon-btn .dot { position: absolute; top: 8px; right: 8px; width: 9px; height: 9px; border-radius: 50%; background: var(--bad); animation: ping 2.4s ease-out infinite; }
+.icon-btn .dot { position: absolute; top: 8px; right: 8px; width: 9px; height: 9px; border-radius: 50%; background: var(--bad); }
+.icon-btn .dot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--bad); opacity: 0; animation: ping 2.4s ease-out 3; }
 @keyframes ping {
-  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--bad) 60%, transparent); }
-  70%, 100% { box-shadow: 0 0 0 9px transparent; }
+  0% { transform: scale(1); opacity: 0.55; }
+  70%, 100% { transform: scale(3); opacity: 0; }
 }
 .chip {
   display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; border: 0;
@@ -388,7 +382,8 @@ button { cursor: pointer; }
 .seg { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 4px; border-radius: 999px; background: var(--fill); box-shadow: inset 0 0 0 1px var(--line); }
 .seg button { position: relative; z-index: 1; border: 0; background: none; padding: 8px 6px; font-size: 13px; font-weight: 650; color: var(--ink-2); border-radius: 999px; transition: color 0.2s; }
 .seg button.on { color: var(--ink); }
-.seg .thumb { position: absolute; top: 4px; bottom: 4px; border-radius: 999px; background: var(--glass-strong); box-shadow: inset 0 1px 0 var(--rim), 0 4px 14px -6px var(--shadow); transition: left 0.5s var(--spring), width 0.5s var(--spring); }
+.seg .thumb { position: absolute; top: 4px; bottom: 4px; border-radius: 999px; background: var(--glass-strong); box-shadow: inset 0 1px 0 var(--rim), 0 4px 14px -6px var(--shadow); }
+.seg.ready .thumb { transition: left 0.28s var(--ease), width 0.28s var(--ease); }
 
 /* ---------- Tab bar ---------- */
 .tabbar {
@@ -407,9 +402,10 @@ button { cursor: pointer; }
   position: absolute; top: 6px; bottom: 6px; border-radius: 999px; z-index: 0;
   background: color-mix(in srgb, var(--accent) 13%, var(--glass-strong));
   box-shadow: inset 0 1px 0 var(--rim), inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), 0 6px 18px -8px color-mix(in srgb, var(--accent) 55%, transparent);
-  transition: left 0.5s var(--spring), width 0.5s var(--spring);
+  left: 0;
+  transition: translate 0.3s var(--spring), width 0.3s var(--spring);
 }
-.blob.moving { animation: squish 0.5s var(--ease); }
+.blob.moving { animation: squish 0.3s var(--ease); }
 @keyframes squish { 0% { transform: scaleX(1); } 35% { transform: scaleX(1.28) scaleY(0.86); } 100% { transform: scaleX(1); } }
 
 /* ---------- Lists, rows, checks ---------- */
@@ -440,7 +436,7 @@ button.item:active { background: var(--fill); }
 .tl::before { content: ''; position: absolute; left: -16px; top: 17px; width: 10px; height: 10px; border-radius: 50%; background: var(--ground); box-shadow: 0 0 0 2px var(--tone, var(--ink-3)); }
 .tl.past { opacity: 0.55; }
 .tl.now { background: var(--card); box-shadow: inset 0 1px 0 var(--rim), inset 0 0 0 1px var(--line), 0 8px 20px -14px var(--shadow); }
-.tl.now::before { background: var(--tone, var(--accent)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--tone, var(--accent)) 30%, transparent); animation: beat 2s ease-in-out infinite; }
+.tl.now::before { background: var(--tone, var(--accent)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--tone, var(--accent)) 30%, transparent); animation: beat 2s ease-in-out 1; }
 @keyframes beat { 50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--tone, var(--accent)) 12%, transparent); } }
 .tl .time { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; width: 44px; flex: none; }
 .tl .slots { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
@@ -467,7 +463,8 @@ button.tile:active { transform: scale(0.96); }
 /* ---------- ปฏิทินในหน้าแรก ---------- */
 .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .cal-wd { text-align: center; font-size: 11.5px; font-weight: 700; color: var(--ink-3); font-family: var(--font-display); }
-.calday { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; min-height: 52px; border: 0; border-radius: 14px; background: none; color: var(--ink); font: inherit; transition: background 0.2s, box-shadow 0.2s; }
+.calday:active { transform: scale(0.93); }
+.calday { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; min-height: 52px; border: 0; border-radius: 14px; background: none; color: var(--ink); font: inherit; transition: transform 0.3s var(--spring); }
 .calday .wd { font-size: 11px; font-weight: 700; color: var(--ink-3); }
 .calday .dn { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .calday.today .dn { background: var(--accent); color: #fff; }
@@ -480,6 +477,7 @@ button.tile:active { transform: scale(0.96); }
 .calrow { display: flex; align-items: stretch; gap: 10px; padding: 9px 0; }
 .calrow + .calrow { box-shadow: inset 0 1px 0 var(--line); }
 .calrow .bar { width: 4px; border-radius: 4px; flex: none; }
+.calrow .calmain:active { opacity: 0.55; }
 .calrow .calmain { min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; }
 .calrow .when { font-size: 12px; font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .calrow .t { font-size: 15px; font-weight: 600; }
@@ -509,7 +507,7 @@ button.tile:active { transform: scale(0.96); }
   position: fixed; z-index: 51; left: 50%; bottom: 0; transform: translateX(-50%);
   width: min(560px, 100%); max-height: 92%; overflow-y: auto; overscroll-behavior: contain;
   border-radius: 30px 30px 0 0; padding: 8px 18px calc(22px + env(safe-area-inset-bottom, 0px));
-  animation: sheetIn 0.55s var(--spring) both;
+  animation: sheetIn 0.34s var(--ease) both;
 }
 .sheet.glass { background: linear-gradient(165deg, var(--glass-top), var(--glass-bottom) 70%), var(--sheet); }
 @keyframes sheetIn { from { transform: translate(-50%, 100%); } to { transform: translate(-50%, 0); } }
@@ -550,7 +548,7 @@ button.tile:active { transform: scale(0.96); }
 .toast {
   position: fixed; z-index: 70; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%);
   padding: 10px 16px; border-radius: 999px; font-weight: 650; font-size: 14px; max-width: calc(100% - 32px);
-  animation: toastIn 0.55s var(--spring) both;
+  animation: toastIn 0.32s var(--ease) both;
 }
 .toast.glass { background: linear-gradient(165deg, var(--glass-top), var(--glass-bottom) 70%), var(--glass-strong); }
 @keyframes toastIn { from { transform: translate(-50%, -140%) scale(0.9); } }
@@ -571,6 +569,7 @@ button.tile:active { transform: scale(0.96); }
 .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .hubtile { padding: 16px; border-radius: var(--r-lg); border: 0; text-align: left; color: var(--ink); display: flex; flex-direction: column; gap: 10px; min-height: 118px; transition: transform 0.3s var(--spring); }
 .hubtile:active { transform: scale(0.96); }
+.btn:active, .icon-btn:active, .chip:active, .check:active, button.tile:active, .hubtile:active, .tl:active, .calday:active { transition-duration: 0.06s; }
 .hubtile .ic {
   width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; color: #fff;
   background: linear-gradient(145deg, color-mix(in srgb, var(--tone) 70%, white), var(--tone));
@@ -606,7 +605,7 @@ a { color: var(--accent); }
   display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 0; border-radius: 999px;
   color: var(--ink); font-size: 13.5px; font-weight: 700; font-family: var(--font-display);
   box-shadow: inset 0 1px 0 var(--rim), inset 0 0 0 1px var(--line), 0 10px 26px -12px var(--shadow);
-  animation: sheetIn 0.45s var(--spring) both;
+  animation: sheetIn 0.3s var(--ease) both;
 }
 .focusbar .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--tone, var(--accent)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--tone, var(--accent)) 22%, transparent); }
 .focusbar .num { font-variant-numeric: tabular-nums; font-size: 15px; }

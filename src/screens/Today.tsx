@@ -355,7 +355,7 @@ export function TodayScreen(props: { nav: Nav; alerts: Alert[] }) {
   const d = useDay();
   const { s, now, today, dayLog, ranked, checks, blocks } = d;
   const [openBlock, setOpenBlock] = useState<Block | null>(null);
-  const metrics = useMemo(() => buildMetrics(s.logs, s.tasks, s.digests, s.settings, s.plan, today, now), [s.logs, s.tasks, s.digests, s.settings, s.plan, today, Math.floor(now.getTime() / 300000)]);
+  const metrics = useMemo(() => buildMetrics(s.logs, s.tasks, s.digests, s.settings, s.plan, today, now, addDays(today, -40)), [s.logs, s.tasks, s.digests, s.settings, s.plan, today, Math.floor(now.getTime() / 300000)]);
   const sum = (id: string) => {
     const m = metrics.find((x) => x.id === id);
     return m ? summarize(m, today) : undefined;

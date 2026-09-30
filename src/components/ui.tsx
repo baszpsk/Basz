@@ -51,12 +51,18 @@ export function Check(props: { on: boolean; tone?: string; onToggle: (e: MouseEv
 export function Seg<T extends string>(props: { options: { id: T; label: string }[]; value: T; onChange: (v: T) => void; id?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [thumb, setThumb] = useState({ left: 4, width: 0 });
+  // เปิดหน้ามาแล้ววางที่ทันที ค่อยเลื่อนนุ่มๆ เฉพาะตอนเปลี่ยนตัวเลือก
+  const [ready, setReady] = useState(false);
   useLayoutEffect(() => {
     const el = ref.current?.querySelector<HTMLButtonElement>('button.on');
     if (el) setThumb({ left: el.offsetLeft, width: el.offsetWidth });
   }, [props.value, props.options.length]);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => requestAnimationFrame(() => setReady(true)));
+    return () => cancelAnimationFrame(id);
+  }, []);
   return (
-    <div class="seg" ref={ref} role="tablist" id={props.id}>
+    <div class={`seg${ready ? ' ready' : ''}`} ref={ref} role="tablist" id={props.id}>
       <span class="thumb" style={{ left: thumb.left + 'px', width: thumb.width + 'px' }} />
       {props.options.map((o) => (
         <button key={o.id} role="tab" aria-selected={o.id === props.value} class={o.id === props.value ? 'on' : ''} onClick={() => props.onChange(o.id)}>

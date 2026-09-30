@@ -8,7 +8,8 @@
     "build": "node build.mjs",
     "widget": "node widget/build.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node test/widget.mjs && node test/run.mjs"
+    "test": "node test/widget.mjs && node test/run.mjs",
+    "perf": "node build.mjs && node test/perf.mjs base"
   },
   "dependencies": {
     "preact": "10.29.8"
