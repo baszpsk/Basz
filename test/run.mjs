@@ -234,6 +234,26 @@ for (const [name, label] of HUB) {
   await pp.click('#pomo-stop');
   await pp.waitForTimeout(300);
   await check(rounds().then((r) => r.some((x) => x.kind === 'work' && x.completed === false && x.endedBy === 'stop' && x.activeSec >= 179 && x.activeSec <= 181)), 'an early stop is logged as not full');
+  // พักได้ทันทีจากตอนว่าง ไม่ต้องรอโฟกัสครบ
+  await pp.click('#pomo-break');
+  await pp.waitForTimeout(200);
+  await check(pomo().then((p) => p?.phase === 'break' && p.running && p.plannedSec === 300), 'กดพัก 5 นาทีจากตอนว่างได้ทันที');
+  await pp.clock.fastForward('05:00');
+  await pp.waitForTimeout(300);
+  await check(pomo().then((p) => p?.phase === 'idle'), 'พักที่เริ่มจากตอนว่างจบแล้วกลับไปรอ');
+  // ตัดโฟกัสกลางรอบเพื่อพักเลย ต้องแตะสองครั้ง รอบโฟกัสบันทึกว่าหยุดเพื่อพัก
+  await pp.click('#pomo-start');
+  await pp.clock.fastForward('10:00');
+  await pp.click('#pomo-break');
+  await pp.waitForTimeout(200);
+  await check(pomo().then((p) => p?.phase === 'work'), 'ตัดโฟกัสเพื่อพักต้องแตะยืนยันอีกครั้ง');
+  await pp.screenshot({ path: 'test/out/33-pomodoro-break-confirm.png' });
+  await pp.click('#pomo-break');
+  await pp.waitForTimeout(300);
+  await check(rounds().then((r) => r.some((x) => x.kind === 'work' && x.completed === false && x.endedBy === 'break' && x.activeSec >= 599 && x.activeSec <= 601)), 'รอบโฟกัสที่ตัดไปพักบันทึกว่าหยุดเพื่อพัก');
+  await check(pomo().then((p) => p?.phase === 'break' && p.running && p.plannedSec === 300), 'พัก 5 นาทีเริ่มทันทีหลังตัดโฟกัส');
+  await pp.click('#pomo-stop');
+  await pp.waitForTimeout(200);
   await pp.click('.sheet button[aria-label="ปิด"]');
   await pp.waitForTimeout(300);
   await pp.click('.tab:has-text("เมนู")');
@@ -242,10 +262,10 @@ for (const [name, label] of HUB) {
   await pp.screenshot({ path: 'test/out/32-pomodoro-stats.png', fullPage: true });
   await noOverflow(pp, 'pomodoro stats');
   const txt = await pp.locator('.screen').last().innerText();
-  await check(txt.includes('บันทึกทุกรอบ') && txt.includes('หยุดก่อนครบ') && txt.includes('คุณภาพการโฟกัส'), 'stats page shows the log and quality');
+  await check(txt.includes('บันทึกทุกรอบ') && txt.includes('หยุดก่อนครบ') && txt.includes('หยุดเพื่อพัก') && txt.includes('คุณภาพการโฟกัส'), 'stats page shows the log and quality');
   await pp.click('button:has-text("ดาวน์โหลดทุกรอบ")');
   await pp.waitForTimeout(300);
-  await check(pp.evaluate(() => { const d = Object.values(window.__downloadData || {})[0] || ''; return d.split('\r\n').length === 4 && d.includes('กดจบก่อน') && d.includes('ครบเวลา'); }), 'CSV export holds every round');
+  await check(pp.evaluate(() => { const d = Object.values(window.__downloadData || {})[0] || ''; return d.split('\r\n').length === 7 && d.includes('กดจบก่อน') && d.includes('หยุดเพื่อพัก') && d.includes('ครบเวลา'); }), 'CSV export holds every round');
 }
 
 // light theme and small phone

@@ -254,7 +254,7 @@ const cell = (v: string | number) => {
   const s = String(v);
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
-const ENDED: Record<string, string> = { timer: 'ครบเวลา', stop: 'กดจบก่อน', skip: 'ข้ามพัก' };
+const ENDED: Record<string, string> = { timer: 'ครบเวลา', stop: 'กดจบก่อน', skip: 'ข้ามพัก', break: 'หยุดเพื่อพัก' };
 
 /** Every recorded round, one row each, for a spreadsheet. The BOM lets Excel read Thai. */
 export function focusCsv(rows: Round[], tasks: Record<string, Task>): string {

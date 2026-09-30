@@ -109,7 +109,7 @@ function TodayDots(props: { rows: Round[]; today: string }) {
 export function FocusSheet(props: { open: boolean; onClose: () => void; nav: Nav }) {
   const s = useStore();
   const now = useNow(1000);
-  const [confirmStop, setConfirmStop] = useState(false);
+  const [confirm, setConfirm] = useState<'stop' | 'break' | null>(null);
   const [picking, setPicking] = useState(false);
   const p = { ...P.IDLE, ...(s.meta.pomo || {}) };
   const f = s.settings.focus;
@@ -119,10 +119,10 @@ export function FocusSheet(props: { open: boolean; onClose: () => void; nav: Nav
   const rep = useMemo(() => focusReport(s.logs, s.tasks, R, f.rest, today, now), [s.logs, s.tasks, today, minute]);
   const ranked = useMemo(() => rankTasks(Object.values(s.tasks), now.getTime(), today, R).slice(0, 4), [s.tasks, today, minute]);
   useEffect(() => {
-    if (!confirmStop) return;
-    const t = window.setTimeout(() => setConfirmStop(false), 3000);
+    if (!confirm) return;
+    const t = window.setTimeout(() => setConfirm(null), 3000);
     return () => window.clearTimeout(t);
-  }, [confirmStop]);
+  }, [confirm]);
 
   const left = p.phase === 'idle' ? f.work * 60 : P.remainingSec(p, now.getTime());
   const total = p.phase === 'idle' ? f.work * 60 : p.plannedSec;
@@ -139,11 +139,21 @@ export function FocusSheet(props: { open: boolean; onClose: () => void; nav: Nav
     burstFrom(e, `${f.work} นาที`);
   };
   const stop = () => {
-    if (p.phase === 'work' && !confirmStop) return setConfirmStop(true);
-    setConfirmStop(false);
+    if (p.phase === 'work' && confirm !== 'stop') return setConfirm('stop');
+    setConfirm(null);
     const wasWork = p.phase === 'work';
     const kept = P.stop();
     toast(wasWork ? (kept ? 'บันทึกรอบนี้แล้ว (หยุดก่อนครบ)' : 'ไม่บันทึก เพราะสั้นกว่า 1 นาที') : 'จบพักแล้ว');
+  };
+  const rest = (e: Event) => {
+    // ตัดโฟกัสที่ทำมาถึง 1 นาทีแล้วต้องแตะยืนยันอีกครั้ง เพราะรอบนั้นจะถูกบันทึกว่าไม่ครบ
+    if (p.phase === 'work' && P.activeSec(p) >= P.MIN_WORK_SEC && confirm !== 'break') return setConfirm('break');
+    setConfirm(null);
+    sound.unlock();
+    const wasWork = p.phase === 'work';
+    const kept = P.startBreak();
+    burstFrom(e, `พัก ${f.rest} นาที`);
+    if (wasWork) toast(kept ? 'บันทึกโฟกัสแล้ว (หยุดเพื่อพัก)' : 'ไม่บันทึกโฟกัส เพราะสั้นกว่า 1 นาที');
   };
 
   return (
@@ -167,18 +177,24 @@ export function FocusSheet(props: { open: boolean; onClose: () => void; nav: Nav
 
         <div class="row wrap" style={{ gap: '8px', justifyContent: 'center' }}>
           {p.phase === 'idle' && (
-            <button class="btn primary" id="pomo-start" onClick={(e) => start(e as unknown as Event)}>{I.play({ size: 18 })} เริ่มโฟกัส {f.work} นาที</button>
+            <>
+              <button class="btn primary" id="pomo-start" onClick={(e) => start(e as unknown as Event)}>{I.play({ size: 18 })} เริ่มโฟกัส {f.work} นาที</button>
+              <button class="btn" id="pomo-break" onClick={(e) => rest(e as unknown as Event)}>{I.moon({ size: 18 })} พัก {f.rest} นาที</button>
+            </>
           )}
           {p.phase === 'work' && (p.running ? (
             <button class="btn" id="pomo-pause" onClick={() => P.pause()}>{I.pause({ size: 18 })} หยุดชั่วคราว</button>
           ) : (
             <button class="btn primary" id="pomo-resume" onClick={() => P.resume()}>{I.play({ size: 18 })} ทำต่อ</button>
           ))}
+          {p.phase === 'work' && (
+            <button class={`btn ${confirm === 'break' ? 'danger' : ''}`} id="pomo-break" onClick={(e) => rest(e as unknown as Event)}>{I.moon({ size: 18 })} {confirm === 'break' ? 'แตะอีกครั้งเพื่อพักเลย' : `พักเลย ${f.rest} นาที`}</button>
+          )}
           {p.phase === 'break' && (
             <button class="btn primary" id="pomo-skip" onClick={(e) => start(e as unknown as Event)}>{I.skip({ size: 18 })} ข้ามพัก เริ่มรอบต่อไป</button>
           )}
           {p.phase !== 'idle' && (
-            <button class={`btn ${confirmStop ? 'danger' : ''}`} id="pomo-stop" onClick={stop}>{I.stop({ size: 18 })} {p.phase === 'break' ? 'จบพัก' : confirmStop ? 'แตะอีกครั้งเพื่อจบก่อนครบ' : 'จบรอบนี้'}</button>
+            <button class={`btn ${confirm === 'stop' ? 'danger' : ''}`} id="pomo-stop" onClick={stop}>{I.stop({ size: 18 })} {p.phase === 'break' ? 'จบพัก' : confirm === 'stop' ? 'แตะอีกครั้งเพื่อจบก่อนครบ' : 'จบรอบนี้'}</button>
           )}
         </div>
 
@@ -254,7 +270,7 @@ function Log(props: { rows: Round[]; tasks: Record<string, Task> }) {
       <div class="h3">บันทึกทุกรอบ (40 รอบล่าสุด)</div>
       <div class="list">
         {recent.map((r) => {
-          const ended = r.endedBy === 'skip' ? 'ข้ามพัก' : isFull(r) ? 'ครบ' : 'หยุดก่อนครบ';
+          const ended = r.endedBy === 'skip' ? 'ข้ามพัก' : r.endedBy === 'break' ? 'หยุดเพื่อพัก' : isFull(r) ? 'ครบ' : 'หยุดก่อนครบ';
           const task = r.taskId ? props.tasks[r.taskId]?.title || r.label : undefined;
           return (
             <div key={r.id} class="item" style={{ padding: '9px 2px' }}>
@@ -387,7 +403,7 @@ export function FocusPage(props: { back: () => void; nav: Nav }) {
 
           <button class="btn block" onClick={exportCsv}>{I.download({ size: 18 })} ดาวน์โหลดทุกรอบเป็นไฟล์ตาราง (CSV)</button>
           <div class="tiny">
-            นิยาม: รอบครบ = นับเวลาจนหมดตามแผน · หยุดก่อนครบ = กดจบเอง (รอบโฟกัสที่สั้นกว่า 1 นาทีไม่บันทึก) · ครบติดกัน = รอบถัดไปเริ่มภายใน {f.rest + 5} นาทีหลังรอบก่อนจบ · เวลาที่นับไม่รวมช่วงหยุดชั่วคราว
+            นิยาม: รอบครบ = นับเวลาจนหมดตามแผน · หยุดก่อนครบ = กดจบเองหรือกดพักเลย (รอบโฟกัสที่สั้นกว่า 1 นาทีไม่บันทึก) · ครบติดกัน = รอบถัดไปเริ่มภายใน {f.rest + 5} นาทีหลังรอบก่อนจบ · เวลาที่นับไม่รวมช่วงหยุดชั่วคราว
           </div>
         </>
       )}

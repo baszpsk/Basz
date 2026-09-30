@@ -96,8 +96,8 @@ export interface FocusSession {
   activeSec?: number;
   /** Ran the full planned length. */
   completed?: boolean;
-  /** timer = ran out; stop = ended early; skip = rest cut short to start the next round. */
-  endedBy?: 'timer' | 'stop' | 'skip';
+  /** timer = ครบเวลา · stop = กดจบก่อน · skip = ตัดพักเพื่อเริ่มรอบต่อไป · break = ตัดโฟกัสเพื่อไปพักทันที */
+  endedBy?: 'timer' | 'stop' | 'skip' | 'break';
   pauses?: { s: number; e: number }[];
   pausedSec?: number;
 }

@@ -64,6 +64,16 @@ export function startWork(link?: Link) {
   write(round('work', now, link || linkOf(p)));
 }
 
+/** เริ่มพักทันทีโดยไม่ต้องรอโฟกัสครบ ทั้งจากตอนว่างและกลางรอบโฟกัส รอบโฟกัสที่ถูกตัดจะบันทึกว่าหยุดเพื่อพัก คืน false เมื่อรอบนั้นสั้นกว่า 1 นาทีจนไม่บันทึก */
+export function startBreak(link?: Link): boolean {
+  const p = current();
+  if (p.phase === 'break') return true;
+  const now = Date.now();
+  const kept = p.phase === 'work' ? record(p, now, 'break') : true;
+  write(round('break', now, link || linkOf(p)));
+  return kept;
+}
+
 export function pause() {
   const p = current();
   if (p.phase === 'idle' || !p.running) return;
