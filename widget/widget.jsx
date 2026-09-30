@@ -246,7 +246,7 @@ function SleepCard(big) {
       <spacer />
     </hstack>,
     <text font={big ? '28,bold' : '24,bold'} color={P.ink}>นอนหลับได้เลย</text>,
-    <text font="13" color={P.ink2}>ยังไม่หลับใน 20 นาที ลุกไปนั่งที่แสงสลัว</text>,
+    <text font="13" color={P.ink2}>ยังไม่หลับใน 15 นาที ลุกไปนั่งที่แสงสลัว</text>,
     big ? <text font="13" color={P.ink2}>ง่วงแล้วค่อยกลับเตียง · นอนตะแคงซ้าย</text> : null,
   ]);
 }
@@ -307,7 +307,7 @@ function medium() {
         <vstack alignment="leading" spacing="4">
           <icon systemName="moon.zzz.fill" size="20" color={P.ink2} />
           <text font="20,bold" color={P.ink}>นอนหลับได้เลย</text>
-          <text font="12" color={P.ink2}>ถ้าราว 20 นาทียังไม่หลับ ลุกไปนั่งที่แสงสลัว</text>
+          <text font="12" color={P.ink2}>ถ้าราว 15 นาทียังไม่หลับ ลุกไปนั่งที่แสงสลัว</text>
         </vstack>
         <spacer />
         {Card([<text font="11,semibold" color={P.ink3}>ตื่น</text>, <text font="22,bold,rounded" color={P.ink}>{st.wake}</text>], { bg: P.soft, pad: '10', r: '16' })}

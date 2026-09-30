@@ -156,12 +156,12 @@ export function buildDay(key: string, st: Settings, plan: Plan | null, log?: Day
     });
   } else {
     if (wd === 0) add({ id: 'weekly', start: M2 + 60, end: M2 + 105, kind: 'review', title: 'ทบทวนสัปดาห์', sub: 'ดูสถิติสัปดาห์ · วางงานใหญ่ของสัปดาห์หน้า', action: 'plan' });
-    add({ id: 'evening', start: wd === 0 ? M2 + 105 : M2 + 60, end: eveEnd, kind: 'evening', area: 'seoulful', title: 'ช่วงค่ำ', sub: 'เช็คยอดขาย/รีวิวร้าน · งานเบาๆ · เวลาครอบครัว', accepts: ['seoulful', 'personal', 'home', 'growth'], items: [{ id: 'biz-check', label: 'เช็คยอดขายและรีวิววันนี้', kind: 'habit' }] });
+    add({ id: 'evening', start: wd === 0 ? M2 + 105 : M2 + 60, end: eveEnd, kind: 'evening', area: 'seoulful', title: 'ช่วงค่ำ', sub: `เช็คยอดขาย/รีวิวร้าน · งานเบาๆ · เวลาครอบครัว · หรี่ไฟในบ้านตั้งแต่ ${fmtHM(L - 180)}`, accepts: ['seoulful', 'personal', 'home', 'growth'], items: [{ id: 'biz-check', label: 'เช็คยอดขายและรีวิววันนี้', kind: 'habit' }] });
     add({ id: 'plan', start: eveEnd, end: L - 90, kind: 'review', title: 'วางแผนพรุ่งนี้', sub: 'เลือก 3 เรื่องที่สำคัญที่สุดของพรุ่งนี้', action: 'plan', items: [{ id: 'top3', label: 'เลือก 3 งานสำคัญของพรุ่งนี้', kind: 'habit' }] });
     add({
       id: 'wind', start: L - 90, end: L - 30, kind: 'wind', area: 'health', title: 'ผ่อนคลายก่อนนอน', sub: 'หรี่ไฟ · วางมือถือ · ทำตามลำดับ',
       items: [
-        { id: 'dim', label: 'หรี่ไฟ วางมือถือ', kind: 'habit' },
+        { id: 'dim', label: 'หรี่ไฟ วางมือถือ', hint: `ไฟในบ้านควรสลัวตั้งแต่ ${fmtHM(L - 180)} คือ 3 ชม. ก่อนปิดไฟ`, kind: 'habit' },
         { id: 'skin-pm', label: 'บำรุงผิวก่อนนอน', hint: 'ล้างหน้า → ยาทาสิว/retinoid ขนาดเม็ดถั่ว → moisturizer', kind: 'care' },
         { id: 'teeth', label: 'แปรงฟัน 2 นาที + ไหมขัดฟัน', kind: 'care' },
       ],
@@ -171,7 +171,7 @@ export function buildDay(key: string, st: Settings, plan: Plan | null, log?: Day
     id: 'read', start: L - 30, end: L, kind: 'wind', area: 'health', title: 'อ่านหนังสือ · หายใจ', sub: 'นั่งนอกเตียง แสงสลัว หายใจท้อง 10 นาที · ครบเวลาแล้วขึ้นเตียง ปิดไฟ นอนตะแคงซ้าย', action: 'breath',
     items: [{ id: 'breath-night', label: 'หายใจท้อง 10 นาที', kind: 'habit' }, { id: 'lights-out', label: 'ปิดไฟตรงเวลา', kind: 'habit' }],
   });
-  add({ id: 'sleep', start: L, end: W + 1440, kind: 'sleep', area: 'health', title: 'การนอน', sub: 'ถ้า 20 นาทียังไม่หลับ ลุกไปนั่งที่แสงสลัว ง่วงแล้วค่อยกลับเตียง' });
+  add({ id: 'sleep', start: L, end: W + 1440, kind: 'sleep', area: 'health', title: 'การนอน', sub: 'ถ้า 15 นาทียังไม่หลับ ลุกไปนั่งที่แสงสลัว ง่วงแล้วค่อยกลับเตียง' });
 
   out.sort((a, b) => a.start - b.start);
 

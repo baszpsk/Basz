@@ -137,7 +137,7 @@ function NowCard(props: { d: ReturnType<typeof useDay>; nav: Nav }) {
         <div class="glow" />
         <div class="row between"><span class="eyebrow">ตอนนี้ · การนอน</span>{I.moon({ size: 20 })}</div>
         <div class="h1" style={{ margin: '8px 0 4px' }}>ได้เวลานอนแล้ว</div>
-        <div class="sub">ตื่น {s.settings.wake} · เหลือ {fmtDuration(toWake)} · ถ้า 20 นาทียังไม่หลับ ลุกไปนั่งที่แสงสลัวก่อน</div>
+        <div class="sub">ตื่น {s.settings.wake} · เหลือ {fmtDuration(toWake)} · ถ้า 15 นาทียังไม่หลับ ลุกไปนั่งที่แสงสลัวก่อน</div>
       </Glass>
     );
   }
