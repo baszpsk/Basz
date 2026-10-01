@@ -15,6 +15,8 @@ import { PlanSheet, TodayScreen, useDay } from './screens/Today';
 import { FocusBar, FocusSheet, usePomodoroClock } from './screens/Focus';
 import * as Pomodoro from './lib/pomodoro';
 import { sound } from './lib/sound';
+import { updateSleep } from './lib/sleepauto';
+import { startUsage } from './lib/usage';
 
 const TABS: { id: TabId; label: string; icon: (p?: { size?: number }) => JSX.Element }[] = [
   { id: 'today', label: 'วันนี้', icon: I.today },
@@ -83,6 +85,20 @@ function Shell() {
   useEffect(() => {
     if (!TABS.some((t) => t.id === tab)) setTabRaw('today');
   }, []);
+  // จดช่วงที่เปิดแอป แล้วสรุปการนอนของเมื่อคืนทุกนาทีและทุกครั้งที่กลับมาเปิด
+  useEffect(() => {
+    startUsage();
+    const id = window.setInterval(() => updateSleep(), 60000);
+    const vis = () => document.visibilityState === 'visible' && updateSleep();
+    document.addEventListener('visibilitychange', vis);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', vis);
+    };
+  }, []);
+  useEffect(() => {
+    if (s.synced) updateSleep();
+  }, [s.synced]);
 
   const nav: Nav = useMemo(
     () => ({

@@ -14,13 +14,15 @@ const skeleton = (body) => `<!doctype html><html><head><meta charset="utf-8"><me
 const pad = (n) => String(n).padStart(2, '0');
 const key = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const now = new Date();
+// วันของแอปเริ่ม 06:00 ถ้ารันเทสต์ก่อนหกโมงเช้า วันนี้ของแอปยังเป็นเมื่อวาน
+const appToday = key(now.getHours() < 6 ? new Date(now.getTime() - 86400000) : now);
 const seed = {};
 let plan = null;
 let shop = [];
 if (existsSync('seed/private/plan.mjs')) ({ plan, shop } = await import('../seed/private/plan.mjs'));
 if (plan) seed['cfg/plan'] = plan;
 for (const s of shop) seed['shop/' + s.id] = s;
-seed['tasks/t1'] = { id: 't1', title: 'ตรวจสต็อกกิมจิและสั่งของ', area: 'seoulful', impact: 3, status: 'todo', createdAt: Date.now() - 3 * 86400000, due: key(now), estimateMin: 25 };
+seed['tasks/t1'] = { id: 't1', title: 'ตรวจสต็อกกิมจิและสั่งของ', area: 'seoulful', impact: 3, status: 'todo', createdAt: Date.now() - 3 * 86400000, due: appToday, estimateMin: 25 };
 seed['tasks/t2'] = { id: 't2', title: 'จองช่างล้างแอร์', area: 'home', impact: 2, status: 'todo', createdAt: Date.now() - 86400000, estimateMin: 10 };
 seed['tasks/t3'] = { id: 't3', title: 'สูตรโคชูจังให้รสคงที่', area: 'seoulful', impact: 3, status: 'waiting', waitingOn: 'เชฟนุ่น', followUpAt: Date.now() - 3600000, createdAt: Date.now() - 5 * 86400000 };
 const months = {};
@@ -54,11 +56,11 @@ for (let i = 1; i <= 40; i++) {
   }
 }
 for (const [m, v] of Object.entries(months)) seed['logs/' + m] = v;
-seed['digests/' + key(now)] = { date: key(now), items: { e1: { id: 'e1', kind: 'email', title: 'ใบแจ้งหนี้ซัพพลายเออร์ครบกำหนด', body: 'กิมจิ 12,400 บาท', source: 'Company inbox', priority: 'high' }, r1: { id: 'r1', kind: 'review', title: 'รีวิว Google Maps ใหม่ 5★', body: 'ต๊อกบกกีอร่อยมาก', source: 'Google Maps', rating: 5 }, n1: { id: 'n1', kind: 'news', title: 'SET แจ้งเตือน AKS เรื่องกรรมการตรวจสอบ', source: 'SET' } } };
+seed['digests/' + appToday] = { date: appToday, items: { e1: { id: 'e1', kind: 'email', title: 'ใบแจ้งหนี้ซัพพลายเออร์ครบกำหนด', body: 'กิมจิ 12,400 บาท', source: 'Company inbox', priority: 'high' }, r1: { id: 'r1', kind: 'review', title: 'รีวิว Google Maps ใหม่ 5★', body: 'ต๊อกบกกีอร่อยมาก', source: 'Google Maps', rating: 5 }, n1: { id: 'n1', kind: 'news', title: 'SET แจ้งเตือน AKS เรื่องกรรมการตรวจสอบ', source: 'SET' } } };
 
 const browser = await chromium.launch();
 const problems = [];
-async function openPage(scheme, width = 430, height = 932, noDb = false, clock = false) {
+async function openPage(scheme, width = 430, height = 932, noDb = false, clock = false, init = '') {
   const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 2, colorScheme: scheme, hasTouch: true, isMobile: true });
   const page = await ctx.newPage();
   page.on('console', (m) => m.type() === 'error' && problems.push(`[console ${scheme}] ${m.text()}`));
@@ -72,7 +74,9 @@ async function openPage(scheme, width = 430, height = 932, noDb = false, clock =
   await page.route('https://fonts.gstatic.com/**', (r) => r.abort());
   await page.route('https://artifact.test/**', (r) => r.fulfill({ contentType: 'text/html', body: skeleton(html) }));
   await page.addInitScript(`window.__NO_DB__ = ${noDb};\nwindow.__SEED__ = ${JSON.stringify(seed)};\n${mock}`);
-  if (clock) await page.clock.install();
+  if (init) await page.addInitScript(init);
+  // clock เป็น Date ได้ เพื่อเริ่มที่เวลาที่กำหนด
+  if (clock) await page.clock.install(clock instanceof Date ? { time: clock } : undefined);
   await page.goto('https://artifact.test/');
   await page.waitForSelector(noDb ? '#no-storage' : '.tabbar');
   await page.waitForTimeout(400);
@@ -359,7 +363,8 @@ for (const [name, label] of HUB) {
   await pp.fill('#focus-range-to', todayK);
   await pp.waitForTimeout(300);
   let want = 1;
-  for (let i = 1; i <= 6; i++) want += seedFull[addK(todayK, -i)] || 0;
+  // นับวันนี้ด้วย: ถ้ารันก่อน 06:00 วันนี้ของแอปคือเมื่อวานซึ่งมีรอบในข้อมูลตัวอย่าง
+  for (let i = 0; i <= 6; i++) want += seedFull[addK(todayK, -i)] || 0;
   await check(kpi().then((t) => t === `${want} รอบ`), 'กำหนดช่วง 7 วันเองได้ และนับรอบตรง');
   await pp.screenshot({ path: 'test/out/35-focus-custom.png' });
   await noOverflow(pp, 'focus custom');
@@ -384,6 +389,58 @@ for (const [name, label] of HUB) {
   await check(pomo().then((x) => x?.phase === 'idle' && (x.set || 0) === 0), 'หลังพักยาวเริ่มนับชุดใหม่');
   await pp.click('.sheet button[aria-label="ปิด"]');
   await pp.waitForTimeout(200);
+}
+
+// การนอนจากการเปิดปิดแอป: คืนปกติไม่ถาม คืนที่เปิดแอปกลางดึกถาม แล้วเลือก แก้ หรือคิดใหม่ได้โดยไม่ทับสิ่งที่เจ้าของเลือก
+{
+  const at = (dayOffset, h, m) => { const d = new Date(now); d.setDate(d.getDate() + dayOffset); d.setHours(h, m, 0, 0); return d; };
+  const usage = (since, list) => `localStorage.setItem('bz1:usage-since', '${since.getTime()}');\nlocalStorage.setItem('bz1:usage', '${JSON.stringify(list.map(([a, b]) => [a.getTime(), b.getTime()]))}');`;
+  const todayK = key(now);
+  const sleepDoc = (p) => p.evaluate((k) => window.__docs.get('logs/' + k.slice(0, 7))?.days?.[k]?.sleep, todayK);
+  const logWrites = (p) => p.evaluate((k) => window.__writes.filter((w) => w[1] === 'logs/' + k.slice(0, 7)).length, todayK);
+  {
+    const { ctx, page: sp } = await openPage('light', 390, 844, false, at(0, 9, 35), usage(at(-1, 18, 0), [[at(-1, 22, 0), at(-1, 23, 55)]]));
+    await sp.waitForTimeout(600);
+    await check(sp.locator('#sleep-card').isVisible(), 'การ์ดเมื่อคืนขึ้นในหน้าวันนี้');
+    await check(sp.locator('#sleep-ask').count().then((n) => n === 0), 'คืนปกติไม่ถาม');
+    await check(sleepDoc(sp).then((r) => r?.auto?.bed === '23:55' && r?.auto?.wake === '09:35' && !r?.auto?.ask?.length && !r?.user), 'จดเวลาวางมือถือ 23:55 และเริ่มใช้ 09:35 ลงช่องที่แอปเดา');
+    await sp.screenshot({ path: 'test/out/40-sleep-card.png', fullPage: true });
+    await noOverflow(sp, 'sleep card');
+    const before = await logWrites(sp);
+    await sp.clock.fastForward('03:00');
+    await sp.waitForTimeout(300);
+    await check(logWrites(sp).then((n) => n === before), 'คิดใหม่ทุกนาทีแต่ไม่เขียนค่าเดิมซ้ำ');
+    await sp.click('.tab[data-tab="body"]');
+    await sp.click('#body-view button:text-is("สุขภาพ")');
+    await sp.waitForTimeout(300);
+    await check(sp.locator('#sleep-history').isVisible(), 'ประวัติการนอนอยู่ในหน้าร่างกาย');
+    await check(sp.locator(`#sleep-history [data-night="${todayK}"]`).innerText().then((t) => t.includes('23:55') && t.includes('09:35')), 'ประวัติแสดงเวลาของเมื่อคืน');
+    await sp.locator('#sleep-history').screenshot({ path: 'test/out/41-sleep-history.png' });
+    await noOverflow(sp, 'sleep history');
+    await ctx.close();
+  }
+  {
+    const { ctx, page: sp } = await openPage('dark', 390, 844, false, at(0, 9, 30), usage(at(-1, 18, 0), [[at(-1, 20, 0), at(-1, 23, 0)], [at(0, 2, 0), at(0, 2, 20)]]));
+    await sp.waitForTimeout(600);
+    await check(sp.locator('#sleep-ask').isVisible(), 'คืนที่เปิดแอปกลางดึกขึ้นถาม');
+    await check(sp.locator('#sleep-merge').isVisible(), 'มีตัวเลือกนับเป็นการนอนช่วงเดียว');
+    await sp.locator('#sleep-ask').screenshot({ path: 'test/out/42-sleep-ask.png' });
+    await noOverflow(sp, 'sleep ask');
+    await sp.click('#sleep-merge');
+    await sp.waitForTimeout(300);
+    await check(sleepDoc(sp).then((r) => r?.user?.bed === '23:00' && r?.user?.wake === '09:30' && r?.auto?.ask?.includes('split')), 'เลือกช่วงรวมแล้วเก็บเป็นค่าที่เจ้าของเลือก ค่าที่แอปเดายังอยู่');
+    await check(sp.locator('#sleep-card').isVisible(), 'ตอบแล้วเห็นสรุปแทนคำถาม');
+    await sp.click('#sleep-edit');
+    await sp.fill('#sleep-bed', '23:40');
+    await sp.fill('#sleep-wake', '09:10');
+    await sp.click('#sleep-save');
+    await sp.waitForTimeout(300);
+    await check(sleepDoc(sp).then((r) => r?.user?.bed === '23:40' && r?.user?.wake === '09:10'), 'กรอกเวลาเองได้');
+    await sp.clock.fastForward('03:00');
+    await sp.waitForTimeout(300);
+    await check(sleepDoc(sp).then((r) => r?.user?.bed === '23:40'), 'แอปคิดใหม่แล้วไม่ทับค่าที่เจ้าของเลือก');
+    await ctx.close();
+  }
 }
 
 // light theme and small phone

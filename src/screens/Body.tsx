@@ -12,6 +12,7 @@ import { sound } from '../lib/sound';
 import { addDays, fmtClock, fmtHM, fmtShortDate, monthOf, todayKey, weekday, wdName } from '../lib/time';
 import type { SetLog } from '../lib/types';
 import { computeStats } from '../lib/stats';
+import { SleepHistory } from './Sleep';
 
 // ---------------- Workout player ----------------
 type Phase = 'warmup' | 'set' | 'rest' | 'summary';
@@ -478,6 +479,8 @@ export function BodyScreen(props: { nav: Nav }) {
             <div class="tile"><div class="k">ปิดไฟตรงเวลาติดกัน</div><div class="v">{stats.sleep.streak}<span class="tiny"> คืน</span></div></div>
             <div class="tile"><div class="k">ตรงเวลา · 14 วัน</div><div class="v">{stats.sleep.last14}<span class="tiny">/14</span></div></div>
           </div>
+
+          <SleepHistory />
 
           <div class="section-head"><h2 class="h2">แผนของคุณ</h2><span class="tiny">แหล่งอ้างอิงอยู่ท้ายแต่ละหัวข้อ</span></div>
           {(s.plan?.guides || []).length ? (

@@ -83,9 +83,44 @@ export interface Plan {
   breakTips?: { short?: string[]; long?: string[]; afterMeal?: string[] };
 }
 
+/** ช่วงนอนที่แอปเดาจากการเปิดปิด Basz OS (ดู sleeplog.ts) */
+export interface SleepGuess {
+  /** เวลาวางมือถือและเวลาเริ่มใช้ แบบ HH:MM · null คือไม่รู้ */
+  bed: string | null;
+  wake: string | null;
+  bedTs: number | null;
+  wakeTs: number | null;
+  /** เหตุผลที่ต้องถามเจ้าของ ว่างคือไม่ต้องถาม */
+  ask: string[];
+  /** ช่วงเงียบอื่นที่ยาวพอจะเป็นการนอน */
+  alt: { bed: number; wake: number }[];
+  /** ถ้าการนอนถูกตัดเป็นสองท่อน: ช่วงรวมตั้งแต่ท่อนแรกถึงท่อนหลัง */
+  merged: { bed: number; wake: number } | null;
+  at: number;
+}
+
+/** เวลาที่เจ้าของเลือกหรือแก้เอง หรือบอกว่าไม่ต้องนับคืนนี้ */
+export interface SleepPick {
+  bed: string | null;
+  wake: string | null;
+  bedTs: number | null;
+  wakeTs: number | null;
+  skip: boolean;
+  at: number;
+}
+
+/** การนอนของคืนก่อนวันนี้ (เก็บไว้ที่วันตื่น)
+ *  แยกค่าที่แอปเดากับค่าที่เจ้าของเลือกไว้คนละช่อง การเดาที่ส่งขึ้นคลาวด์ช้าจึงไม่มีทางทับสิ่งที่เจ้าของเลือก */
+export interface SleepRec {
+  auto?: SleepGuess | null;
+  user?: SleepPick | null;
+  /** จากเช็คอินเช้าเดิม: ตื่นเพราะแสบร้อน ไอ หรือสำลักกี่ครั้ง */
+  refluxWakes?: number;
+}
+
 export interface DayLog {
   checks?: Record<string, number | null>;
-  sleep?: { bed?: string; wake?: string };
+  sleep?: SleepRec;
   steps?: number;
   protein?: number;
   nightOut?: boolean;

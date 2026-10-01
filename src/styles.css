@@ -613,3 +613,10 @@ a { color: var(--accent); }
 .pomo-dots span { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--accent); }
 .pomo-dots span.on { background: var(--accent); }
 .btn.danger { color: var(--bad); box-shadow: inset 0 0 0 1.5px var(--bad); }
+.sleep-line { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.sleep-line .k { font-size: 12px; color: var(--ink-3); font-weight: 700; font-family: var(--font-display); }
+.sleep-line .v { font-family: var(--font-display); font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.sleep-opt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 11px 14px; min-height: 52px; border: 0; border-radius: var(--r-md); background: var(--fill); box-shadow: inset 0 0 0 1px var(--line); color: var(--ink); font: inherit; text-align: left; }
+.sleep-opt:active { background: var(--fill-2); }
+.sleep-opt .t { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+.sleep-opt .d { font-size: 12.5px; color: var(--ink-3); }
