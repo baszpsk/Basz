@@ -261,6 +261,13 @@ for (const [name, label] of HUB) {
     await btn.click();
     await page.waitForTimeout(200);
     await check(page.evaluate(() => [...window.__docs.values()].some((d) => d && d.flow && d.flow.id === 'laundry')), 'laundry flow created');
+    const rt = await page.locator('.screen').last().innerText();
+    await check(rt.includes('Delay End ใช้ได้เฉพาะตอนใช้ผงซักฟอก'), 'ไม่แนะนำ Delay End กับน้ำยาซักผ้าตามคู่มือ LG');
+    await page.click('#laundry-tab button:text-is("วิธีดูแลผ้า")');
+    await page.waitForTimeout(200);
+    const gt = await page.locator('.screen').last().innerText();
+    await check(gt.includes('ชุดชั้นในและบ็อกเซอร์') && gt.includes('Easy Care') && gt.includes('ไม่กด TurboWash'), 'ชุดชั้นในใช้ Easy Care และไม่กด TurboWash');
+    await noOverflow(page, 'laundry guide');
   }
   if (name === 'settings') {
     await page.fill('#set-wake', '09:15');
